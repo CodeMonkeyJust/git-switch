@@ -3,16 +3,20 @@ import { api } from '../api.js';
 import { t } from '../i18n.js';
 
 /**
- * Identity management: list every identity with its sites, add one, edit one, or
- * delete one. Every write goes through the API, which persists profiles.yaml;
- * nothing reaches ~/.gitconfig until the user applies from the Preview screen.
+ * Identity management.
+ *
+ * The form mirrors how a user thinks about an identity: who you are → which key
+ * proves it → which host it talks to. Every field carries a visible label (a
+ * placeholder alone disappears as soon as you type), and the SSH key is a
+ * <select> of the keys that actually exist rather than free text.
  */
 export async function renderIdentities(container, app) {
   clear(container);
   container.append(el('h2', { text: t('web.identitiesTitle') }));
 
-  const state = await api.state();
+  const [state, keyReport] = await Promise.all([api.state(), api.keys()]);
   app.state = state;
+  const keyNames = keyReport.keys.map((k) => k.name);
 
   const grid = el('div', { class: 'grid' });
   for (const identity of state.identities) {
@@ -24,14 +28,14 @@ export async function renderIdentities(container, app) {
 
     grid.append(
       el('div', { class: 'card' }, [
-        el('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:8px' }, [
+        el('div', { class: 'card-head' }, [
           el('strong', { text: identity.name }),
           identity.sshKey ? tag('ok', identity.sshKey) : tag('warn', t('web.noKey')),
         ]),
-        el('div', { class: 'mono muted', text: `${identity.userName} <${identity.email}>` }),
-        el('div', { class: 'mono muted', text: `${t('web.identitySites')}: ${sites || t('web.noSites')}` }),
-        rules > 0 ? el('div', { class: 'muted', text: `${rules}` }) : null,
-        el('div', { style: 'margin-top:12px;display:flex;gap:8px' }, [
+        fieldLine(t('web.field.userName'), `${identity.userName} <${identity.email}>`),
+        fieldLine(t('web.field.siteHost'), sites || t('web.noSites')),
+        rules > 0 ? fieldLine(t('web.field.dir'), t('web.ruleCount', rules)) : null,
+        el('div', { class: 'card-actions' }, [
           el('button', {
             text: t('web.editIdentity'),
             onclick: (event) => {
@@ -43,7 +47,7 @@ export async function renderIdentities(container, app) {
                 return;
               }
               event.target.textContent = t('web.cancel');
-              card.append(identityEditor(container, app, identity, site));
+              card.append(identityEditor(container, app, identity, site, keyNames));
             },
           }),
           el('button', {
@@ -60,45 +64,82 @@ export async function renderIdentities(container, app) {
   }
   container.append(grid);
 
-  container.append(el('h3', { text: t('web.addIdentity') }), identityForm(container, app));
+  container.append(el('h3', { text: t('web.addIdentity') }), identityForm(container, app, keyNames));
+  if (state.rules.length > 0) {
+    container.append(el('div', { class: 'muted', text: t('web.identityOrderHint') }));
+  }
 }
 
-function input(value, placeholder) {
+/** "label: value" row used in cards. */
+function fieldLine(label, value) {
+  return el('div', { class: 'kv' }, [
+    el('span', { class: 'kv-label', text: label }),
+    el('span', { class: 'kv-value mono', text: value }),
+  ]);
+}
+
+/** A labelled field: the label is always visible above the control. */
+function field(labelText, control, hint, { required = false } = {}) {
+  const label = el('label', { class: 'field' }, [
+    el('span', { class: 'field-label' }, [
+      labelText,
+      required ? el('span', { class: 'req', text: ' *' }) : null,
+      hint ? el('span', { class: 'field-hint', text: ` ${hint}` }) : null,
+    ]),
+    control,
+  ]);
+  return label;
+}
+
+function textInput(value, placeholder) {
   return el('input', {
+    type: 'text',
     value: value ?? '',
     placeholder: placeholder ?? '',
-    style:
-      'font-family:var(--mono);padding:6px 10px;border:1px solid var(--border);' +
-      'border-radius:6px;background:var(--bg);color:var(--fg);width:100%',
+    class: 'input',
   });
 }
 
-function row(labelText, control) {
-  return el('div', { class: 'row', style: 'display:block' }, [
-    el('div', { class: 'muted', text: labelText }),
-    control,
+/** A <select> that includes a "no key" option and the keys found in ~/.ssh. */
+function keySelect(current, keyNames) {
+  const options = [
+    el('option', { value: '', text: t('web.keyfileNone'), selected: !current }),
+    ...keyNames.map((name) =>
+      el('option', { value: name, text: name, selected: name === current }),
+    ),
+  ];
+  // a profile may reference a key that is not on disk yet: keep it selectable
+  if (current && !keyNames.includes(current)) {
+    options.push(el('option', { value: current, text: `${current} ${t('web.keyMissing')}`, selected: true }));
+  }
+  return el('select', { class: 'input' }, options);
+}
+
+function group(title, children) {
+  return el('fieldset', { class: 'field-group' }, [
+    el('legend', { text: title }),
+    ...children.filter(Boolean),
   ]);
 }
 
 /** Inline editor shown inside an identity card. */
-function identityEditor(container, app, identity, site) {
-  const panel = el('div', { class: 'edit-panel', style: 'margin-top:12px;border-top:1px solid var(--border);padding-top:12px' });
-  const error = el('div', { class: 'muted', text: '' });
+function identityEditor(container, app, identity, site, keyNames) {
+  const panel = el('div', { class: 'edit-panel' });
+  const error = el('div', { class: 'form-error', text: '' });
 
-  const name = input(identity.name, t('web.identityName'));
-  const userName = input(identity.userName, t('web.userName'));
-  const email = input(identity.email, t('web.userEmail'));
-  const sshKey = input(identity.sshKey ?? '', t('web.sshKey'));
-  const host = input(site?.host ?? '', t('web.siteHost'));
-  const port = input(site?.port ?? '', t('web.sitePort'));
-  const alias = input(site?.alias ?? '', t('web.siteAlias'));
+  const name = textInput(identity.name, t('web.identityNameHint'));
+  const userName = textInput(identity.userName, 'zhulj');
+  const email = textInput(identity.email, 'you@example.com');
+  const sshKey = keySelect(identity.sshKey, keyNames);
+  const host = textInput(site?.host ?? '', t('web.hostHint'));
+  const port = textInput(site?.port ?? '', t('web.portHint'));
+  const alias = textInput(site?.alias ?? '', t('web.aliasHint'));
 
   const save = el('button', {
     class: 'primary',
     text: t('web.saveEdit'),
     onclick: async () => {
       error.textContent = '';
-      error.className = 'muted';
       try {
         await api.updateIdentity({
           original: identity.name,
@@ -114,44 +155,48 @@ function identityEditor(container, app, identity, site) {
         await renderIdentities(container, app);
       } catch (err) {
         error.textContent = err.message;
-        error.className = 'notice error';
       }
     },
   });
 
   panel.append(
-    row(t('web.identityName'), name),
-    row(t('web.userName'), userName),
-    row(t('web.userEmail'), email),
-    row(t('web.sshKey'), sshKey),
-    row(t('web.siteHost'), host),
-    row(t('web.sitePort'), port),
-    row(t('web.siteAlias'), alias),
+    group(t('web.section.identity'), [
+      field(t('web.field.name'), name, t('web.identityNameHint'), { required: true }),
+      field(t('web.field.userName'), userName, null, { required: true }),
+      field(t('web.field.email'), email, null, { required: true }),
+    ]),
+    group(t('web.section.key'), [
+      field(t('web.field.sshKey'), sshKey, t('web.keyfileHint'), { required: true }),
+    ]),
+    group(t('web.section.site'), [
+      field(t('web.field.siteHost'), host, t('web.hostHint')),
+      field(t('web.field.sitePort'), port, t('web.portHint')),
+      field(t('web.field.siteAlias'), alias, t('web.aliasHint')),
+    ]),
     el('div', { class: 'muted', text: t('web.editHint') }),
-    el('div', { style: 'margin-top:12px' }, [save]),
+    el('div', { class: 'form-actions' }, [save]),
     error,
   );
   return panel;
 }
 
-function identityForm(container, app) {
+function identityForm(container, app, keyNames) {
   const card = el('div', { class: 'card' });
-  const error = el('div', { class: 'muted', text: '' });
+  const error = el('div', { class: 'form-error', text: '' });
 
-  const name = input('', t('web.identityNameHint'));
-  const userName = input('', 'zhulj');
-  const email = input('', 'you@example.com');
-  const sshKey = input('', 'id_ed25519_work');
-  const host = input('', 'github.com');
-  const port = input('', '22');
-  const alias = input('', 'gh');
+  const name = textInput('', 'gitee');
+  const userName = textInput('', 'zhulj');
+  const email = textInput('', 'you@example.com');
+  const sshKey = keySelect('', keyNames);
+  const host = textInput('', t('web.hostHint'));
+  const port = textInput('', t('web.portHint'));
+  const alias = textInput('', t('web.aliasHint'));
 
   const submit = el('button', {
     class: 'primary',
     text: t('web.save'),
     onclick: async () => {
       error.textContent = '';
-      error.className = 'muted';
       try {
         await api.addIdentity({
           name: name.value.trim(),
@@ -166,20 +211,25 @@ function identityForm(container, app) {
         await renderIdentities(container, app);
       } catch (err) {
         error.textContent = err.message;
-        error.className = 'notice error';
       }
     },
   });
 
   card.append(
-    row(t('web.identityName'), name),
-    row(t('web.userName'), userName),
-    row(t('web.userEmail'), email),
-    row(t('web.sshKey'), sshKey),
-    row(t('web.siteHost'), host),
-    row(t('web.sitePort'), port),
-    row(t('web.siteAlias'), alias),
-    el('div', { style: 'margin-top:12px' }, [submit]),
+    group(t('web.section.identity'), [
+      field(t('web.field.name'), name, t('web.identityNameHint'), { required: true }),
+      field(t('web.field.userName'), userName, null, { required: true }),
+      field(t('web.field.email'), email, null, { required: true }),
+    ]),
+    group(t('web.section.key'), [
+      field(t('web.field.sshKey'), sshKey, t('web.keyfileHint'), { required: true }),
+    ]),
+    group(t('web.section.site'), [
+      field(t('web.field.siteHost'), host, t('web.hostHint')),
+      field(t('web.field.sitePort'), port, t('web.portHint')),
+      field(t('web.field.siteAlias'), alias, t('web.aliasHint')),
+    ]),
+    el('div', { class: 'form-actions' }, [submit]),
     error,
   );
   return card;
@@ -191,12 +241,11 @@ async function deleteIdentity(container, app, name, rulesInUse) {
     await api.removeIdentity(name, false);
     app.toast(t('web.identityDeleted', name));
   } catch (err) {
-    // the identity is still referenced by rules: ask once more, explicitly
     if (/still used|仍被/.test(err.message) && confirm(err.message)) {
       await api.removeIdentity(name, true);
       app.toast(t('web.identityDeleted', name));
     } else if (rulesInUse >= 0 && err.status === 409) {
-      return; // user declined
+      return;
     } else {
       app.toast(err.message, 'error');
       return;

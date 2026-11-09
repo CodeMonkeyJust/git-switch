@@ -2,6 +2,13 @@ import { el, clear, notice } from '../dom.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 
+/**
+ * Directory → identity rules.
+ *
+ * The add form follows the natural decision order: pick the directory (with a
+ * browser, because typing paths by hand is error-prone), then pick the identity.
+ * Every control has a persistent label.
+ */
 export async function renderRules(container, app) {
   clear(container);
   container.append(el('h2', { text: t('web.tab.rules') }));
@@ -14,6 +21,7 @@ export async function renderRules(container, app) {
     return;
   }
 
+  /* ---- existing rules ---- */
   const list = el('div', { class: 'card' });
   if (state.rules.length === 0) {
     list.append(el('div', { class: 'empty', text: t('web.noRules') }));
@@ -22,12 +30,11 @@ export async function renderRules(container, app) {
   for (const rule of state.rules) {
     const select = el(
       'select',
-      {},
+      { class: 'input', disabled: true },
       state.identities.map((i) =>
         el('option', { value: i.name, text: i.name, selected: i.name === rule.identity }),
       ),
     );
-    select.disabled = true;
 
     list.append(
       el('div', { class: 'row' }, [
@@ -47,83 +54,136 @@ export async function renderRules(container, app) {
     );
   }
   container.append(list);
+  if (state.rules.length > 0) {
+    container.append(el('div', { class: 'muted', text: t('web.identityOrderHint') }));
+  }
 
-  container.append(el('h3', { text: t('web.addRuleTitle') }));
-
-  const picker = el('div', { class: 'card' });
-  const pathInput = el('input', {
-    class: 'path',
-    placeholder: t('web.pathPlaceholder'),
-    style:
-      'font-family:var(--mono);padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg)',
-  });
-  const identitySelect = el(
-    'select',
-    {},
-    state.identities.map((i) => el('option', { value: i.name, text: i.name })),
-  );
-
-  picker.append(
-    el('div', { class: 'row' }, [
-      pathInput,
-      el('button', {
-        text: t('web.browse'),
-        onclick: async () => {
-          await showBrowser(picker, app, pathInput);
-        },
-      }),
-      identitySelect,
-      el('button', {
-        class: 'primary',
-        text: t('web.addRule'),
-        onclick: async () => {
-          const dir = pathInput.value.trim();
-          if (!dir) {
-            app.toast(t('web.enterDir'), 'warn');
-            return;
-          }
-          try {
-            await api.addRule(dir, identitySelect.value);
-            app.toast(t('web.ruleAdded'));
-            await renderRules(container, app);
-          } catch (err) {
-            app.toast(err.message, 'error');
-          }
-        },
-      }),
-    ]),
-  );
-  container.append(picker);
+  /* ---- add form ---- */
+  container.append(el('h3', { text: t('web.addRuleTitle') }), addForm(container, app, state));
 }
 
-async function showBrowser(picker, app, pathInput) {
-  let browser = picker.querySelector('.browser');
-  if (browser) browser.remove();
-  browser = el('div', { class: 'browser card', style: 'margin-top:12px' });
+function field(labelText, control, hint, { required = false } = {}) {
+  return el('label', { class: 'field' }, [
+    el('span', { class: 'field-label' }, [
+      labelText,
+      required ? el('span', { class: 'req', text: ' *' }) : null,
+      hint ? el('span', { class: 'field-hint', text: ` ${hint}` }) : null,
+    ]),
+    control,
+  ]);
+}
 
+function addForm(container, app, state) {
+  const card = el('div', { class: 'card' });
+  const error = el('div', { class: 'form-error', text: '' });
+
+  // directory comes first: it is what the user is actually thinking about
+  const dirInput = el('input', {
+    type: 'text',
+    class: 'input',
+    placeholder: t('web.dirHint'),
+  });
+
+  const identitySelect = el(
+    'select',
+    { class: 'input' },
+    [
+      el('option', { value: '', text: t('web.selectPlaceholder'), selected: true }),
+      ...state.identities.map((i) => el('option', { value: i.name, text: i.name })),
+    ],
+  );
+
+  const browseBox = el('div', { class: 'browse-box' });
+
+  const browseButton = el('button', {
+    text: t('web.browse'),
+    onclick: async () => {
+      if (browseBox.children.length > 0) {
+        browseBox.replaceChildren();
+        return;
+      }
+      await showBrowser(browseBox, dirInput);
+    },
+  });
+
+  const submit = el('button', {
+    class: 'primary',
+    text: t('web.addRule'),
+    onclick: async () => {
+      error.textContent = '';
+      const dir = dirInput.value.trim();
+      if (dir === '') {
+        error.textContent = t('web.enterDir');
+        return;
+      }
+      if (identitySelect.value === '') {
+        error.textContent = t('web.field.identity') + ': ' + t('web.required');
+        return;
+      }
+      try {
+        await api.addRule(dir, identitySelect.value);
+        app.toast(t('web.ruleAdded'));
+        await renderRules(container, app);
+      } catch (err) {
+        error.textContent = err.message;
+      }
+    },
+  });
+
+  card.append(
+    el('fieldset', { class: 'field-group' }, [
+      el('legend', { text: t('web.section.target') }),
+      field(t('web.field.dir'), dirInput, t('web.dirHint'), { required: true }),
+      el('div', { class: 'form-actions' }, [browseButton]),
+      browseBox,
+    ]),
+    el('fieldset', { class: 'field-group' }, [
+      el('legend', { text: t('web.section.assign') }),
+      field(t('web.field.identity'), identitySelect, null, { required: true }),
+    ]),
+    el('div', { class: 'form-actions' }, [submit]),
+    error,
+  );
+  return card;
+}
+
+/** Server-side directory browser: fills the input and picks a folder. */
+async function showBrowser(box, dirInput) {
   const render = async (dir) => {
-    clear(browser);
+    clear(box);
     const result = await api.browse(dir);
-    pathInput.value = result.dir;
-    browser.append(el('div', { class: 'mono muted', text: result.dir }), result.error ? notice('error', result.error) : null);
+    dirInput.value = result.dir;
+
+    if (result.error) box.append(notice('error', result.error));
     if (result.parent) {
-      browser.append(
+      box.append(
         el('div', { class: 'row' }, [
-          el('span', { class: 'path', text: '..' }),
+          el('span', { class: 'path muted', text: '..' }),
           el('button', { text: t('web.up'), onclick: () => render(result.parent) }),
         ]),
       );
     }
     for (const entry of result.entries) {
-      browser.append(
+      box.append(
         el('div', { class: 'row' }, [
           el('span', { class: 'path', text: entry.name + (entry.isRepo ? '  (repo)' : '') }),
           el('button', { text: t('web.open'), onclick: () => render(entry.path) }),
         ]),
       );
     }
+    box.append(
+      el('div', { class: 'form-actions' }, [
+        el('button', {
+          class: 'primary',
+          text: t('web.useThisDir'),
+          onclick: () => {
+            dirInput.value = result.dir;
+            box.replaceChildren();
+          },
+        }),
+      ]),
+    );
   };
 
-  await render(pathInput.value.trim() || undefined);
-  picker.append(browser);
+  await render(dirInput.value.trim() || undefined);
 }

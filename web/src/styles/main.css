@@ -166,3 +166,75 @@ pre.diff .ctx { color: var(--muted); }
 
 .banner { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .empty { padding: 32px; text-align: center; color: var(--muted); }
+
+/* ---------- forms ---------- */
+
+.field-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px 14px;
+  margin: 0 0 14px;
+}
+.field-group > legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.field { display: block; margin-bottom: 10px; }
+.field:last-child { margin-bottom: 0; }
+
+.field-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--fg);
+  font-weight: 500;
+}
+.field-label .req { color: var(--err); }
+.field-hint {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.input {
+  width: 100%;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+.input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.form-actions { margin-top: 12px; display: flex; gap: 8px; }
+.form-error { margin-top: 8px; font-size: 13px; color: var(--err); }
+.form-error:empty { display: none; }
+
+.edit-panel {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- card layout ---------- */
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.card-actions { margin-top: 12px; display: flex; gap: 8px; }
+
+.kv { display: flex; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+.kv-label { color: var(--muted); min-width: 96px; flex: none; }
+.kv-value { color: var(--fg); overflow-wrap: anywhere; }

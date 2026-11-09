@@ -31,7 +31,8 @@
     "smoke:gui": "node scripts/smoke-gui.mjs",
     "smoke:gui-browser": "node scripts/smoke-gui-browser.mjs",
     "smoke:gui-parity": "node scripts/smoke-gui-parity.mjs",
-    "smoke:gui-home": "node scripts/smoke-gui-home.mjs"
+    "smoke:gui-home": "node scripts/smoke-gui-home.mjs",
+    "check:ui": "node scripts/check-ui-labels.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

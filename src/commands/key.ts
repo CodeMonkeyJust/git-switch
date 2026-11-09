@@ -56,7 +56,7 @@ export async function keyCommand(opts: KeyOptions): Promise<number> {
         if (result.fingerprint) logger.dim(`   ${result.fingerprint}`);
         const copied = await copyToClipboard(result.publicKey);
         logger.info(copied ? 'public key copied to the clipboard' : 'public key (copy it manually):');
-        if (!copied) process.stdout.write(`${result.publicKey}\n`);
+        if (!copied) logger.write(`${result.publicKey}\n`);
         return 0;
       } catch (err) {
         logger.error((err as Error).message);
@@ -79,7 +79,7 @@ export async function keyCommand(opts: KeyOptions): Promise<number> {
         if (copied) logger.ok(`public key for ${opts.target} copied to the clipboard`);
         else {
           logger.warn('could not access the clipboard; here is the key:');
-          process.stdout.write(`${pub}\n`);
+          logger.write(`${pub}\n`);
         }
         return 0;
       } catch (err) {

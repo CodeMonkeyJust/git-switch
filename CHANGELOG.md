@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Tests for `gs list`, `gs diff` and the diff renderer, which had none: the cwd
+  resolution, the "no matching rule" warning, `--json` output for both commands,
+  that `diff` never writes, and that apply-then-list agree.
 - The GUI's ES modules are now **executed** in tests against a DOM shim, so a
   missing function or a wrong call signature fails a test instead of showing a
   blank page. Each of the four screens is rendered and asserted on, a failing API
@@ -92,6 +95,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A truncated diff hid every added line.** A whole-file rewrite renders as all
+  removals followed by all additions, so capping the output with a plain head
+  slice showed only deletions — the user approved changes they never saw.
+  Truncation now keeps removals and additions in balance and drops context lines
+  first.
+- `gs diff` wrote its diff bodies straight to `process.stdout`, bypassing the
+  logger. Under `--json` that corrupted the JSON document (`Unexpected token
+  'i'`), and the output could not be redirected or captured. Commands now write
+  through `logger.write`.
 - **The test suite was intermittently red.** `gui-command.test.ts` spawned the
   CLI as a child process while the test runner was writing to the same stdio
   channel, corrupting the runner's IPC stream on Windows

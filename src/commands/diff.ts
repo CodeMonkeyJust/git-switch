@@ -44,8 +44,8 @@ export async function diffCommand(opts: DiffOptions): Promise<number> {
     const title = `${op.label}  (${op.kind})`;
     logger.info(title);
     const d = unifiedDiff(op.before ?? '', op.after ?? '');
-    if (d) process.stdout.write(d + '\n');
-    process.stdout.write('\n');
+    if (d) logger.write(`${d}\n`);
+    logger.write('\n');
   }
 
   logger.dim(`${changed.length} file(s) would change`);

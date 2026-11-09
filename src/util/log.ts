@@ -24,6 +24,12 @@ export interface Logger {
   error(message: string): void;
   dim(message: string): void;
   json(value: unknown): void;
+  /**
+   * Raw output (diff bodies, tables) on the same stream as the other levels.
+   * Commands must not write to process.stdout directly: that bypasses the
+   * injected stream, breaks `--json` parsing and makes output untestable.
+   */
+  write(text: string): void;
   readonly isJson: boolean;
 }
 
@@ -57,6 +63,10 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     warn: (m) => emit('warn', m),
     error: (m) => emit('error', m),
     dim: (m) => emit('dim', m),
+    write: (text) => {
+      if (isJson) return;
+      stream.write(text);
+    },
     json: (value: unknown) => {
       stream.write(`${JSON.stringify(value, null, 2)}\n`);
     },

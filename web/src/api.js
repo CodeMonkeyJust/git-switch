@@ -72,6 +72,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ add: true, ...fields }),
     }),
+  updateIdentity: (fields) =>
+    request('/api/identities', {
+      method: 'POST',
+      body: JSON.stringify({ update: true, ...fields }),
+    }),
   removeIdentity: (name, force = false) =>
     request(`/api/identities?remove=${encodeURIComponent(name)}${force ? '&force=1' : ''}`, {
       method: 'POST',

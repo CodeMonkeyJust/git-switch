@@ -229,6 +229,156 @@ rules:
   );
 });
 
+test('an identity can be edited in place', async () => {
+  await withServer(seedProfile, async ({ home, base, auth }) => {
+    const res = await fetch(`${base}/api/identities`, {
+      method: 'POST',
+      headers: { ...auth, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        update: true,
+        original: 'personal',
+        name: 'personal',
+        userName: 'zlj20',
+        email: 'new@example.com',
+        sshKey: 'id_other',
+        host: 'github.com',
+        alias: 'gh2',
+      }),
+    });
+    const text = await res.text();
+    assert.equal(res.status, 200, text);
+
+    const profiles = await loadProfiles(home);
+    const edited = profiles.identities.find((i) => i.name === 'personal');
+    assert.equal(edited?.user.email, 'new@example.com');
+    assert.equal(edited?.sshKey, 'id_other');
+    assert.equal(profiles.sites.find((s) => s.identity === 'personal')?.alias, 'gh2');
+  });
+});
+
+test('renaming an identity updates the rules that reference it', async () => {
+  await withServer(seedProfile, async ({ home, base, auth }) => {
+    const res = await fetch(`${base}/api/identities`, {
+      method: 'POST',
+      headers: { ...auth, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        update: true,
+        original: 'personal',
+        name: 'home',
+        userName: 'zlj20',
+        email: 'zlj20@163.com',
+        sshKey: 'id_ed25519_github',
+        host: 'github.com',
+      }),
+    });
+    assert.equal(res.status, 200, await res.text());
+
+    // a rename that left the rule pointing at the old name would break loading
+    const profiles = await loadProfiles(home);
+    assert.ok(profiles.identities.some((i) => i.name === 'home'));
+    assert.equal(profiles.identities.some((i) => i.name === 'personal'), false);
+    assert.ok(profiles.rules.every((r) => r.identity === 'home'), JSON.stringify(profiles.rules));
+  });
+});
+
+test('editing rejects an invalid email and leaves the file unchanged', async () => {
+  await withServer(seedProfile, async ({ home, base, auth }) => {
+    const before = await readFile(path.join(home, '.config', 'gs', 'profiles.yaml'), 'utf8');
+    const res = await fetch(`${base}/api/identities`, {
+      method: 'POST',
+      headers: { ...auth, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        update: true,
+        original: 'personal',
+        name: 'personal',
+        userName: 'x',
+        email: 'bad-email',
+      }),
+    });
+    assert.equal(res.status, 400);
+    const after = await readFile(path.join(home, '.config', 'gs', 'profiles.yaml'), 'utf8');
+    assert.equal(after, before);
+  });
+});
+
+test('renaming onto an existing name is rejected', async () => {
+  // two identities declared together, before the rules section
+  const two = `schemaVersion: 1
+identities:
+  personal:
+    user:
+      name: zlj20
+      email: zlj20@163.com
+    sshKey: id_ed25519_github
+    sites:
+      - host: github.com
+        alias: gh
+  other:
+    user:
+      name: o
+      email: o@example.com
+rules:
+  - dir: /code/github
+    identity: personal
+`;
+  await withServer(
+    (home) => seedProfile(home, two),
+    async ({ home, base, auth }) => {
+      const res = await fetch(`${base}/api/identities`, {
+        method: 'POST',
+        headers: { ...auth, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          update: true,
+          original: 'personal',
+          name: 'other',
+          userName: 'x',
+          email: 'x@example.com',
+        }),
+      });
+      assert.equal(res.status, 400);
+      const profiles = await loadProfiles(home);
+      assert.equal(profiles.identities.filter((i) => i.name === 'other').length, 1);
+    },
+  );
+});
+
+test('editing a missing identity returns 404', async () => {
+  await withServer(seedProfile, async ({ base, auth }) => {
+    const res = await fetch(`${base}/api/identities`, {
+      method: 'POST',
+      headers: { ...auth, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        update: true,
+        original: 'ghost',
+        name: 'ghost',
+        userName: 'g',
+        email: 'g@example.com',
+      }),
+    });
+    assert.equal(res.status, 404);
+  });
+});
+
+test('clearing the SSH key removes it', async () => {
+  await withServer(seedProfile, async ({ home, base, auth }) => {
+    await fetch(`${base}/api/identities`, {
+      method: 'POST',
+      headers: { ...auth, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        update: true,
+        original: 'personal',
+        name: 'personal',
+        userName: 'zlj20',
+        email: 'zlj20@163.com',
+        sshKey: '',
+        host: 'github.com',
+      }),
+    });
+    const profiles = await loadProfiles(home);
+    assert.equal(profiles.identities.find((i) => i.name === 'personal')?.sshKey, undefined);
+  });
+});
+
 test('the last identity cannot be deleted, keeping the profile loadable', async () => {
   await withServer(seedProfile, async ({ home, base, auth }) => {
     const res = await fetch(`${base}/api/identities?remove=personal&force=1`, {

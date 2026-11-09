@@ -385,6 +385,11 @@ const en: Catalogue = {
   'web.importConfirm': 'Replace ~/.config/gs/profiles.yaml with the imported profile?',
   'web.imported': 'Imported {0} identities and {1} rules — open Preview to apply',
   'web.importHasKeys': 'the snapshot contains encrypted private keys; use “Restore keys” below',
+  'web.editIdentity': 'Edit',
+  'web.saveEdit': 'Save changes',
+  'web.unknownIdentity': 'identity "{0}" no longer exists',
+  'web.identityUpdated': 'Identity "{0}" updated — open Preview to apply',
+  'web.editHint': 'Editing a name also updates every rule and site that refers to it.',
 
   // init screen
   'web.initTitle': 'Setup',
@@ -680,6 +685,11 @@ const zhCN: Catalogue = {
   'web.importConfirm': '用导入的配置替换 ~/.config/gs/profiles.yaml？',
   'web.imported': '已导入 {0} 个身份和 {1} 条规则——打开预览以应用',
   'web.importHasKeys': '快照中包含加密的私钥，可用下方「恢复密钥」写入',
+  'web.editIdentity': '编辑',
+  'web.saveEdit': '保存修改',
+  'web.unknownIdentity': '身份「{0}」已不存在',
+  'web.identityUpdated': '已更新身份「{0}」——打开预览以应用',
+  'web.editHint': '修改名称时，所有引用它的规则和站点会一并更新。',
 
   // init screen
   'web.initTitle': '初始化',

@@ -52,6 +52,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Identities can be edited in the GUI**, not just added and deleted. Every
+  field is editable — name, commit name/email, SSH key, and the site's
+  host/port/alias — and renaming an identity updates every rule, repository
+  override and site that refers to it, so the profile keeps loading. Invalid
+  input is rejected without touching the file, and a rename onto an existing name
+  is refused.
 - **The GUI now covers every CLI command.** Three new tabs close the gap:
   - **Keys** — list keys with fingerprints and owning identities, copy a public
     key through the server-side clipboard, generate a new key pair (confirmed

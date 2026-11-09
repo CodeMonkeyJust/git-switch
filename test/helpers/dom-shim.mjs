@@ -18,6 +18,7 @@ class DomNode {
     this.dataset = {};
     this.className = '';
     this._text = '';
+    this.parentNode = null;
   }
 
   get firstChild() {
@@ -27,7 +28,9 @@ class DomNode {
   append(...nodes) {
     for (const n of nodes) {
       if (n === null || n === undefined) continue;
-      this.children.push(typeof n === 'string' ? createText(n) : n);
+      const child = typeof n === 'string' ? createText(n) : n;
+      child.parentNode = this;
+      this.children.push(child);
     }
   }
 
@@ -77,6 +80,16 @@ class DomNode {
 
   querySelectorAll(selector) {
     return this._find((n) => matchesSelector(n, selector), false);
+  }
+
+  /** Walk up through parents until one matches. Requires `parentNode`. */
+  closest(selector) {
+    let node = this;
+    while (node) {
+      if (node.nodeType === 1 && matchesSelector(node, selector)) return node;
+      node = node.parentNode ?? null;
+    }
+    return null;
   }
 
   _find(predicate, firstOnly) {

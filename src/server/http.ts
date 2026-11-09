@@ -368,6 +368,8 @@ async function handleApi(
       const body = (await readBody(req)) as
         | {
             add?: boolean;
+            update?: boolean;
+            original?: string;
             name?: string;
             userName?: string;
             email?: string;
@@ -411,6 +413,92 @@ async function handleApi(
         profiles.identities = profiles.identities.filter((i) => i.name !== remove);
         profiles.sites = profiles.sites.filter((s) => s.identity !== remove);
         await saveProfiles(ctx.home, profiles);
+        sendJson(res, 200, profileSummary(ctx.home, profiles));
+        return;
+      }
+
+      if (body?.update) {
+        // Editing an identity: every field may change except the identity's
+        // position in the list. Renaming has to update the rules and sites that
+        // reference it, otherwise the profile stops loading.
+        const original = (body.original ?? '').trim();
+        const existing = profiles.identities.find((i) => i.name === original);
+        if (!existing) {
+          sendJson(res, 404, { error: t('web.unknownIdentity', original) });
+          return;
+        }
+
+        const name = (body.name ?? '').trim();
+        const userName = (body.userName ?? '').trim();
+        const email = (body.email ?? '').trim();
+
+        const problems: string[] = [];
+        if (name === '') problems.push(`${t('web.identityName')}: ${t('web.required')}`);
+        if (userName === '') problems.push(`${t('web.userName')}: ${t('web.required')}`);
+        if (email === '') problems.push(`${t('web.userEmail')}: ${t('web.required')}`);
+        if (name !== '' && !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) {
+          problems.push(`${t('web.identityName')}: ${t('web.invalidName')}`);
+        }
+        if (email !== '' && !/^[^\s@]+@[^\s@]+$/.test(email)) {
+          problems.push(`${t('web.userEmail')}: ${t('web.invalidEmail')}`);
+        }
+        // a rename must not collide with a different existing identity
+        if (name !== original && profiles.identities.some((i) => i.name === name)) {
+          problems.push(t('web.duplicateIdentity', name));
+        }
+        if (problems.length > 0) {
+          sendJson(res, 400, { error: t('web.invalidIdentity', problems.join('; ')), problems });
+          return;
+        }
+
+        const before = JSON.stringify({
+          identities: profiles.identities,
+          rules: profiles.rules,
+          sites: profiles.sites,
+          repositories: profiles.repositories,
+        });
+
+        existing.name = name;
+        existing.user = { name: userName, email };
+        const keyRaw = (body.sshKey ?? '').trim();
+        if (keyRaw === '') delete existing.sshKey;
+        else existing.sshKey = keyRaw;
+
+        if (name !== original) {
+          for (const rule of profiles.rules) if (rule.identity === original) rule.identity = name;
+          for (const repo of profiles.repositories) if (repo.identity === original) repo.identity = name;
+          for (const site of profiles.sites) if (site.identity === original) site.identity = name;
+        }
+
+        // The site is replaced wholesale: an empty host removes it.
+        const host = (body.host ?? '').trim();
+        profiles.sites = profiles.sites.filter((s) => s.identity !== name);
+        if (host !== '') {
+          const portRaw = body.port;
+          const port =
+            portRaw === null || portRaw === undefined || String(portRaw).trim() === ''
+              ? undefined
+              : Number.parseInt(String(portRaw), 10);
+          if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) {
+            sendJson(res, 400, { error: t('web.invalidIdentity', `${t('web.sitePort')}: 1-65535`) });
+            return;
+          }
+          const site: (typeof profiles.sites)[number] = { host, identity: name };
+          if (port !== undefined) site.port = port;
+          const alias = (body.alias ?? '').trim();
+          if (alias !== '') site.alias = alias;
+          profiles.sites.push(site);
+        }
+
+        try {
+          await saveProfiles(ctx.home, profiles);
+        } catch (err) {
+          // a rejected write leaves the file untouched; say so rather than
+          // reporting success and showing the old data
+          sendJson(res, 400, { error: (err as Error).message });
+          return;
+        }
+        void before;
         sendJson(res, 200, profileSummary(ctx.home, profiles));
         return;
       }

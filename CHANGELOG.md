@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GUI write-path tests: drive the real HTTP endpoints the browser calls
+  (plan → apply → plan) and confirm with plain git that the identity took
+  effect, that a malformed profile is refused without writing, and that a rule
+  added in the UI reaches `~/.gitconfig`.
 - `gs init` points at the identities most likely to need a personal address
   (`github`, `gitee`, …) when every identity received the global email, instead
   of a blanket “set a distinct email” hint.

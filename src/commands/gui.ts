@@ -99,10 +99,30 @@ export async function guiCommand(opts: GuiOptions): Promise<number> {
     await unlink(lockPath(home)).catch(() => {});
   };
 
+  // Always say which home this instance operates on. A GUI launched with --home
+  // looks exactly like the real one, and mistaking a sandbox for the live
+  // configuration makes "I changed it but nothing happened" very hard to explain.
+  const sandbox = path.resolve(home) !== path.resolve(homedir());
+
   if (opts.json) {
-    logger.json({ url: server.url, port: server.port, pid: process.pid });
+    logger.json({
+      url: server.url,
+      port: server.port,
+      pid: process.pid,
+      home,
+      sandbox,
+    });
+    // `--json` suppresses warnings on stdout, but a sandbox home is important
+    // enough to state on stderr, where it never corrupts the JSON document.
+    if (sandbox) logger.error(t('gui.sandboxWarn'));
   } else {
     logger.ok(t('gui.listening', `http://127.0.0.1:${server.port}/`));
+    logger.dim(t('gui.home', home));
+    if (sandbox) {
+      logger.warn(t('gui.sandboxWarn'));
+    } else {
+      logger.dim(t('gui.realHome'));
+    }
     logger.dim(t('gui.tokenHint'));
     if (opts.open !== false) {
       logger.dim(t('gui.opening'));

@@ -7,6 +7,7 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { mkdir, readFile, stat } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { authorize, createToken, hostIsAllowed, originIsAllowed } from './auth.ts';
@@ -17,7 +18,7 @@ import { plan } from '../core/plan.ts';
 import { apply } from '../core/apply.ts';
 import { runDoctor } from '../core/checks.ts';
 import { resolveIdentity, sitesFor, type Profiles } from '../core/model.ts';
-import { gsPaths, contractHome, normaliseRulePath } from '../core/paths.ts';
+import { gsPaths, contractHome, normaliseRulePath, toPosix } from '../core/paths.ts';
 import { unifiedDiff } from '../util/diff.ts';
 import { writeFileAtomic } from '../util/fs-atomic.ts';
 import { listKeys, generateKey, publicKeyFor, copyToClipboard } from '../core/keys.ts';
@@ -268,6 +269,12 @@ async function handleApi(
 
       sendJson(res, 200, {
         home: contractHome(ctx.home, ctx.home),
+        // A GUI started with --home looks identical to the real one. Tell the page
+        // which home it is operating on so a user never mistakes a sandbox for
+        // their live configuration.
+        realHome: os.homedir(),
+        isSandbox: path.resolve(ctx.home) !== path.resolve(os.homedir()),
+        homePath: toPosix(ctx.home),
         language: getLanguage(),
         messages: webCatalogue(),
         profileExists: await profilesExist(ctx.home),

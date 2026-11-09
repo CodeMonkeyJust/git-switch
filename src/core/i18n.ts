@@ -248,6 +248,10 @@ const en: Catalogue = {
   'gui.listening': 'GUI listening on {0}',
   'gui.tokenHint': 'the token is embedded in the URL fragment; open the printed link',
   'gui.opening': 'opening your browser…',
+  'gui.home': 'operating on {0}',
+  'gui.sandboxWarn':
+    'NOTE: this is a SANDBOX home, not your real one. Changes made here do not affect ~/.ssh or ~/.gitconfig.',
+  'gui.realHome': 'this is your real home; changes here affect your live configuration',
   'gui.alreadyRunning': 'gs gui is already running on port {0}',
   'gui.alreadyRunningHint': 'open {0} in your browser (restart that instance to get a fresh token)',
   'gui.idleExit': 'no activity for {0} minutes, shutting down',
@@ -305,6 +309,10 @@ const en: Catalogue = {
   'web.checking': 'checking…',
   'web.missingToken':
     'Missing token. Open the URL that `gs gui` printed, which includes #token=…',
+  'web.sandboxBanner':
+    'SANDBOX: operating on {0}. Changes here do NOT touch your real ~/.ssh or ~/.gitconfig.',
+  'web.realHomeBanner': 'Operating on your real home: {0}',
+  'web.dismiss': 'Dismiss',
   'web.identitiesTitle': 'Identities',
   'web.addIdentity': 'Add identity',
   'web.addIdentityTitle': 'New identity',
@@ -537,6 +545,10 @@ const zhCN: Catalogue = {
   'gui.listening': '图形界面已启动：{0}',
   'gui.tokenHint': '访问口令在 URL 的 # 片段中，请打开打印出来的链接',
   'gui.opening': '正在打开浏览器…',
+  'gui.home': '当前操作的目录：{0}',
+  'gui.sandboxWarn':
+    '注意：这是沙箱目录，不是你真实的 home。此处的改动不会影响 ~/.ssh 或 ~/.gitconfig。',
+  'gui.realHome': '这是你的真实 home，此处的改动会直接生效',
   'gui.alreadyRunning': 'gs gui 已在端口 {0} 上运行',
   'gui.alreadyRunningHint': '请在浏览器打开 {0}（重启该实例可获取新口令）',
   'gui.idleExit': '已闲置 {0} 分钟，正在退出',
@@ -592,6 +604,10 @@ const zhCN: Catalogue = {
   'web.runOnline': '执行 SSH 探测',
   'web.checking': '检查中…',
   'web.missingToken': '缺少访问口令。请打开 `gs gui` 打印的、包含 #token=… 的地址。',
+  'web.sandboxBanner':
+    '沙箱：当前操作的是 {0}。此处的改动不会影响你真实的 ~/.ssh 和 ~/.gitconfig。',
+  'web.realHomeBanner': '正在操作你的真实 home：{0}',
+  'web.dismiss': '知道了',
   'web.identitiesTitle': '身份',
   'web.addIdentity': '新增身份',
   'web.addIdentityTitle': '新建身份',

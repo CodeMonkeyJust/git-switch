@@ -35,6 +35,36 @@ function translateChrome() {
     select.value = getLanguage();
     select.setAttribute('aria-label', t('web.language'));
   }
+  renderHomeBanner(app.state);
+}
+
+/**
+ * State which home this instance operates on.
+ *
+ * A GUI started with --home looks identical to the real one. Without this banner
+ * a user can spend an hour configuring an identity in a sandbox and wonder why
+ * their real ~/.ssh never changed.
+ */
+function renderHomeBanner(state) {
+  const slot = document.getElementById('home-banner');
+  if (!slot) return;
+  slot.replaceChildren();
+  if (!state) return;
+
+  const sandbox = state.isSandbox === true;
+  const banner = Object.assign(document.createElement('div'), {
+    className: `notice ${sandbox ? 'error' : 'ok'}`,
+    textContent: sandbox
+      ? t('web.sandboxBanner', state.homePath ?? state.home)
+      : t('web.realHomeBanner', state.homePath ?? state.home),
+  });
+  const dismiss = Object.assign(document.createElement('button'), {
+    textContent: t('web.dismiss'),
+    className: 'dismiss',
+  });
+  dismiss.addEventListener('click', () => slot.replaceChildren());
+  banner.append(dismiss);
+  slot.append(banner);
 }
 
 const app = {
@@ -56,11 +86,16 @@ const app = {
       tab.setAttribute('aria-selected', String(tab.dataset.view === view));
     }
     const main = document.getElementById('main');
+    // the banner lives outside the view container so switching tabs keeps it
+    const banner = document.getElementById('home-banner');
     main.replaceChildren();
+    if (banner) main.append(banner);
+    const host = Object.assign(document.createElement('div'), { className: 'view' });
+    main.append(host);
     try {
-      await VIEWS[view](main, this);
+      await VIEWS[view](host, this);
     } catch (err) {
-      main.replaceChildren(
+      host.replaceChildren(
         Object.assign(document.createElement('div'), {
           className: 'notice error',
           textContent: err.message,

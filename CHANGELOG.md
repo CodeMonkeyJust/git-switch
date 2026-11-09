@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`gs gui --home` looks exactly like the real GUI, so a user could configure an
+  identity in a sandbox and be confused when their real `~/.ssh` never changed.**
+  The command now prints the home it operates on and warns explicitly when it is
+  not the real one (`--json` includes `home` and `sandbox` fields), and the page
+  shows a persistent banner naming the home — red for a sandbox, neutral for the
+  real home. The banner survives tab switches and can be dismissed.
 - **The GUI could not be opened at all.** `gs gui` printed a URL like
   `http://127.0.0.1:PORT/#token=…`, but the server required the token for the
   index page too. A browser never sends the URL fragment, so the first request

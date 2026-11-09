@@ -78,6 +78,23 @@ body {
 }
 .lang-picker + .status { margin-left: 12px; }
 
+/* the home banner stays above the active view */
+.home-banner:empty { display: none; }
+.home-banner .notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+.home-banner .notice.error { border-width: 2px; }
+.home-banner .dismiss {
+  flex: none;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
 main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
 h2 { font-size: 18px; margin: 0 0 16px; }

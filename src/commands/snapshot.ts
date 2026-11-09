@@ -1,4 +1,5 @@
 import { mkdir, readFile } from 'node:fs/promises';
+import { t } from '../core/i18n.ts';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
@@ -50,7 +51,7 @@ export async function snapshotCommand(opts: SnapshotOptions): Promise<number> {
     case 'import':
       return importSnapshot(opts, home);
     default:
-      opts.logger.error('usage: gs snapshot <export|import> <file>');
+      opts.logger.error(t('snapshot.usage'));
       return 2;
   }
 }
@@ -79,7 +80,7 @@ async function exportSnapshot(opts: SnapshotOptions, home: string): Promise<numb
   if (!opts.force) {
     const existing = await readFile(target, 'utf8').catch(() => undefined);
     if (existing !== undefined) {
-      logger.error(`${target} already exists; pass --force to overwrite`);
+      logger.error(t('snapshot.exists', target));
       return 2;
     }
   }
@@ -98,14 +99,12 @@ async function exportSnapshot(opts: SnapshotOptions, home: string): Promise<numb
     return 0;
   }
 
-  logger.ok(`wrote ${target}`);
-  logger.dim(
-    `   ${snapshot.files.length} files · ${profiles.identities.length} identities · ${profiles.rules.length} rules`,
-  );
+  logger.ok(t('snapshot.exported', target));
+  logger.dim(`   ${t('snapshot.exportSummary', snapshot.files.length, profiles.identities.length, profiles.rules.length)}`);
   if (snapshot.manifest.containsKeys) {
-    logger.warn('contains PRIVATE KEYS and is encrypted; keep the passphrase safe');
+    logger.warn(t('snapshot.hasKeys'));
   } else {
-    logger.dim('   no private keys included (--with-keys adds them, encrypted)');
+    logger.dim(`   ${t('snapshot.noKeys')}`);
   }
   return 0;
 }
@@ -119,7 +118,7 @@ async function importSnapshot(opts: SnapshotOptions, home: string): Promise<numb
 
   const text = await readFile(opts.target, 'utf8').catch(() => undefined);
   if (text === undefined) {
-    logger.error(`cannot read ${opts.target}`);
+    logger.error(t('snapshot.cannotRead', String(opts.target)));
     return 2;
   }
 
@@ -159,7 +158,7 @@ async function importSnapshot(opts: SnapshotOptions, home: string): Promise<numb
   const profiles = remapProfiles(verdict.profiles, remaps);
 
   if ((await profilesExist(home)) && !opts.force) {
-    logger.error('a profile already exists at ~/.config/gs/profiles.yaml; pass --force to replace it');
+    logger.error(t('snapshot.profileExists'));
     return 2;
   }
 
@@ -176,14 +175,14 @@ async function importSnapshot(opts: SnapshotOptions, home: string): Promise<numb
     return 0;
   }
 
-  logger.ok(`imported ${profiles.identities.length} identities and ${profiles.rules.length} rules`);
-  for (const [from, to] of remaps) logger.dim(`   remapped ${from} -> ${to}`);
+  logger.ok(t('snapshot.imported', profiles.identities.length, profiles.rules.length));
+  for (const [from, to] of remaps) logger.dim(`   ${t('snapshot.remapped', from, to)}`);
 
   if (snapshot.manifest.containsKeys) {
-    logger.warn('the snapshot holds private keys, which this command does NOT write to ~/.ssh');
-    logger.dim(`   restore them explicitly with: gs key restore ${opts.target}`);
+    logger.warn(t('snapshot.keysNotWritten'));
+    logger.dim(`   ${t('snapshot.keysRestoreHint', String(opts.target))}`);
   }
 
-  logger.dim('next: gs doctor   then   gs diff   then   gs apply');
+  logger.dim(t('snapshot.next'));
   return 0;
 }

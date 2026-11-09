@@ -3,6 +3,7 @@ import { loadProfiles } from '../core/profiles.ts';
 import { plan } from '../core/plan.ts';
 import { unifiedDiff } from '../util/diff.ts';
 import type { Logger } from '../util/log.ts';
+import { t } from '../core/i18n.ts';
 
 export interface DiffOptions {
   home?: string;
@@ -36,7 +37,7 @@ export async function diffCommand(opts: DiffOptions): Promise<number> {
 
   const changed = p.ops.filter((op) => op.kind !== 'unchanged');
   if (changed.length === 0) {
-    logger.ok('no changes (already up to date)');
+    logger.ok(t('diff.noChanges'));
     return 0;
   }
 
@@ -48,6 +49,6 @@ export async function diffCommand(opts: DiffOptions): Promise<number> {
     logger.write('\n');
   }
 
-  logger.dim(`${changed.length} file(s) would change`);
+  logger.dim(t('diff.wouldChange', changed.length));
   return p.errors.length > 0 ? 2 : 0;
 }

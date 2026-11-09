@@ -10,46 +10,51 @@ import { guiCommand } from './commands/gui.ts';
 import { keyCommand } from './commands/key.ts';
 import { snapshotCommand } from './commands/snapshot.ts';
 import { createLogger } from './util/log.ts';
+import { resolveLanguage, setLanguage, t } from './core/i18n.ts';
 import { ModelError } from './core/model.ts';
 import { ProfilesMissingError } from './core/profiles.ts';
 import { BlockError } from './core/managed-block.ts';
 
 const VERSION = '0.1.0';
 
-const USAGE = `gs — Git & SSH identity manager
+/** The help screen is built per language so `--lang` can change it. */
+function usageText(): string {
+  return `${t('usage.title')}
 
-Usage: gs <command> [options]
+${t('usage.heading')}
 
-Commands:
-  init [--root <dir>]   Detect SSH hosts, repositories and working keys; write a profile
-        [--force]       Overwrite an existing profile
-        [--offline]     Skip network probing of keyless sites
-  list                  Show identities, directory rules and what applies here
-  diff                  Preview every change gs would make
-  apply [--dry-run]     Write managed blocks to ~/.gitconfig and ~/.ssh/config
-        [--force]       Overwrite managed blocks edited by hand
-  doctor [--online]     Diagnose keys, ssh config and the identity in this directory
-  gui [--port N]        Open the local web UI (bound to 127.0.0.1)
-        [--no-open]     Do not launch a browser
-        [--idle-timeout <min>]  Exit after N idle minutes (default 30, 0 disables)
-  key list              List SSH keys with fingerprints and the identities using them
-  key gen <name>        Create a new ed25519 key pair (public key goes to the clipboard)
-  key copy <name>       Copy a public key to the clipboard
+${t('usage.commands')}
+  init [--root <dir>]   ${t('init.usage')}
+        [--force]       ${t('init.force')}
+        [--offline]     ${t('init.offline')}
+  list                  ${t('list_rules_hint')}
+  diff                  ${t('diff_hint')}
+  apply [--dry-run]     ${t('apply_hint')}
+        [--force]       ${t('apply_force_hint')}
+  doctor [--online]     ${t('doctor_hint')}
+  gui [--port N]        ${t('gui_hint')}
+        [--no-open]     ${t('gui_noopen_hint')}
+        [--idle-timeout <min>]  ${t('gui_idle_hint')}
+  key list              ${t('key_list_hint')}
+  key gen <name>        ${t('key_gen_hint')}
+  key copy <name>       ${t('key_copy_hint')}
   key restore <snapshot> [--force]
-                        Write the keys embedded in a snapshot back into ~/.ssh
+                        ${t('key_restore_hint')}
   snapshot export <file> [--with-keys] [--force]
-                        Write a portable snapshot (encrypted when it holds keys)
+                        ${t('snapshot_export_hint')}
   snapshot import <file> [--remap OLD=NEW] [--force]
-                        Restore a profile from a snapshot
-  help                  Show this message
-  version               Print the version
+                        ${t('snapshot_import_hint')}
+  help                  ${t('usage.help')}
+  version               ${t('usage.version')}
 
-Options:
-  --home <dir>          Use an alternative home directory (testing)
-  --json                Machine-readable output
-  --no-color            Disable colours
+${t('usage.options')}
+  --home <dir>          ${t('option_home')}
+  --lang <en|zh-CN>     ${t('usage.lang')}
+  --json                ${t('option_json')}
+  --no-color            ${t('option_nocolor')}
 
-Exit codes: 0 ok · 1 warning · 2 error`;
+${t('usage.exitCodes')}`;
+}
 
 interface ParsedArgs {
   command: string | undefined;
@@ -71,7 +76,7 @@ function allOf(parsed: ParsedArgs, name: string): string[] {
   return parsed.values.get(name) ?? [];
 }
 
-const VALUE_FLAGS = ['--home', '--port', '--idle-timeout', '--root', '--comment', '--remap'];
+const VALUE_FLAGS = ['--home', '--port', '--idle-timeout', '--root', '--comment', '--remap', '--lang'];
 
 function parseArgs(argv: string[]): ParsedArgs {
   const flags = new Set<string>();
@@ -109,6 +114,8 @@ function parseArgs(argv: string[]): ParsedArgs {
 export async function main(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
   const home = valueOf(args, 'home') ?? homedir();
+  // language precedence: --lang, then GS_LANG, then the OS locale
+  setLanguage(resolveLanguage(valueOf(args, 'lang')));
 
   // Report-style commands print an ordered narrative. Splitting errors and
   // warnings onto stderr would interleave with the stdout sections, so those
@@ -124,7 +131,7 @@ export async function main(argv: string[]): Promise<number> {
     case undefined:
     case 'help':
     case '--help':
-      process.stdout.write(USAGE + '\n');
+      process.stdout.write(usageText() + '\n');
       return 0;
     case 'version':
     case '--version':
@@ -191,8 +198,8 @@ export async function main(argv: string[]): Promise<number> {
         logger,
       });
     default:
-      logger.error(`unknown command: ${args.command}`);
-      process.stdout.write(USAGE + '\n');
+      logger.error(t('error.unknownCommand', String(args.command)));
+      process.stdout.write(usageText() + '\n');
       return 2;
   }
 }

@@ -1,4 +1,5 @@
 import { api, hasToken } from './api.js';
+import { setMessages, applyStaticTranslations, t } from './i18n.js';
 import { renderOverview } from './views/overview.js';
 import { renderRules } from './views/rules.js';
 import { renderPreview } from './views/preview.js';
@@ -10,6 +11,16 @@ const VIEWS = {
   preview: renderPreview,
   doctor: renderDoctor,
 };
+
+/** Re-label the tab bar in the active language. */
+function translateChrome() {
+  applyStaticTranslations(document);
+  for (const tab of document.querySelectorAll('.tab')) {
+    const view = tab.dataset.view;
+    if (view) tab.textContent = t(`web.tab.${view}`);
+  }
+  document.title = t('web.title');
+}
 
 const app = {
   state: undefined,
@@ -46,14 +57,12 @@ const app = {
   },
 };
 
-function boot() {
+async function boot() {
   if (!hasToken()) {
-    // The token lives in the fragment; without it nothing can be authenticated.
     document.getElementById('main').replaceChildren(
       Object.assign(document.createElement('div'), {
         className: 'notice error',
-        textContent:
-          'Missing token. Open the URL that `gs gui` printed, which includes #token=…',
+        textContent: t('web.missingToken'),
       }),
     );
     return;
@@ -63,19 +72,24 @@ function boot() {
     tab.addEventListener('click', () => app.goto(tab.dataset.view));
   }
 
-  api
-    .state()
-    .then((state) => {
-      document.getElementById('status').textContent =
-        `${state.identities.length} identities · ${state.rules.length} rules`;
-      app.state = state;
-    })
-    .catch((err) => {
-      document.getElementById('status').textContent = err.message;
-      document.getElementById('status').className = 'status error';
-    });
+  // Fetch the catalogue first so the first paint is already localised.
+  try {
+    const state = await api.state();
+    setMessages(state.messages, state.language);
+    app.state = state;
+    translateChrome();
+    document.getElementById('status').textContent = t(
+      'web.counts',
+      state.identities.length,
+      state.rules.length,
+      state.repositories.length,
+    );
+  } catch (err) {
+    document.getElementById('status').textContent = err.message;
+    document.getElementById('status').className = 'status error';
+  }
 
-  void app.goto('overview');
+  await app.goto('overview');
 }
 
 boot();

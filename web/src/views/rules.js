@@ -1,21 +1,22 @@
 import { el, clear, notice } from '../dom.js';
 import { api } from '../api.js';
+import { t } from '../i18n.js';
 
 export async function renderRules(container, app) {
   clear(container);
-  container.append(el('h2', { text: 'Directory rules' }));
+  container.append(el('h2', { text: t('web.tab.rules') }));
 
   const state = await api.state();
   app.state = state;
 
   if (state.identities.length === 0) {
-    container.append(notice('warn', 'No identities defined. Run gs init first.'));
+    container.append(notice('warn', t('web.noIdentities')));
     return;
   }
 
   const list = el('div', { class: 'card' });
   if (state.rules.length === 0) {
-    list.append(el('div', { class: 'empty', text: 'No rules yet — every repository falls back to the global identity.' }));
+    list.append(el('div', { class: 'empty', text: t('web.noRules') }));
   }
 
   for (const rule of state.rules) {
@@ -34,11 +35,11 @@ export async function renderRules(container, app) {
         select,
         el('button', {
           class: 'danger',
-          text: 'Remove',
+          text: t('web.remove'),
           onclick: async () => {
-            if (!confirm(`Remove the rule for ${rule.dir}?`)) return;
+            if (!confirm(t('web.removeConfirm', rule.dir))) return;
             await api.removeRule(rule.dir);
-            app.toast('Rule removed — apply to make it effective');
+            app.toast(t('web.ruleRemoved'));
             await renderRules(container, app);
           },
         }),
@@ -47,14 +48,14 @@ export async function renderRules(container, app) {
   }
   container.append(list);
 
-  // adding a rule needs a real path, so we browse the filesystem server-side
-  container.append(el('h3', { text: 'Add a rule' }));
+  container.append(el('h3', { text: t('web.addRuleTitle') }));
 
   const picker = el('div', { class: 'card' });
   const pathInput = el('input', {
     class: 'path',
-    placeholder: '/path/to/directory',
-    style: 'font-family:var(--mono);padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg)',
+    placeholder: t('web.pathPlaceholder'),
+    style:
+      'font-family:var(--mono);padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg)',
   });
   const identitySelect = el(
     'select',
@@ -66,24 +67,24 @@ export async function renderRules(container, app) {
     el('div', { class: 'row' }, [
       pathInput,
       el('button', {
-        text: 'Browse',
+        text: t('web.browse'),
         onclick: async () => {
-          await showBrowser(picker, app, pathInput, identitySelect);
+          await showBrowser(picker, app, pathInput);
         },
       }),
       identitySelect,
       el('button', {
         class: 'primary',
-        text: 'Add rule',
+        text: t('web.addRule'),
         onclick: async () => {
           const dir = pathInput.value.trim();
           if (!dir) {
-            app.toast('Enter a directory first', 'warn');
+            app.toast(t('web.enterDir'), 'warn');
             return;
           }
           try {
             await api.addRule(dir, identitySelect.value);
-            app.toast('Rule added — open Preview to apply');
+            app.toast(t('web.ruleAdded'));
             await renderRules(container, app);
           } catch (err) {
             app.toast(err.message, 'error');
@@ -95,7 +96,7 @@ export async function renderRules(container, app) {
   container.append(picker);
 }
 
-async function showBrowser(picker, app, pathInput, identitySelect) {
+async function showBrowser(picker, app, pathInput) {
   let browser = picker.querySelector('.browser');
   if (browser) browser.remove();
   browser = el('div', { class: 'browser card', style: 'margin-top:12px' });
@@ -104,15 +105,12 @@ async function showBrowser(picker, app, pathInput, identitySelect) {
     clear(browser);
     const result = await api.browse(dir);
     pathInput.value = result.dir;
-    browser.append(
-      el('div', { class: 'mono muted', text: result.dir }),
-      result.error ? notice('error', result.error) : null,
-    );
+    browser.append(el('div', { class: 'mono muted', text: result.dir }), result.error ? notice('error', result.error) : null);
     if (result.parent) {
       browser.append(
         el('div', { class: 'row' }, [
           el('span', { class: 'path', text: '..' }),
-          el('button', { text: 'Up', onclick: () => render(result.parent) }),
+          el('button', { text: t('web.up'), onclick: () => render(result.parent) }),
         ]),
       );
     }
@@ -120,7 +118,7 @@ async function showBrowser(picker, app, pathInput, identitySelect) {
       browser.append(
         el('div', { class: 'row' }, [
           el('span', { class: 'path', text: entry.name + (entry.isRepo ? '  (repo)' : '') }),
-          el('button', { text: 'Open', onclick: () => render(entry.path) }),
+          el('button', { text: t('web.open'), onclick: () => render(entry.path) }),
         ]),
       );
     }

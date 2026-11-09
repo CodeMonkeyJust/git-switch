@@ -1,26 +1,24 @@
 import { el, clear, tag } from '../dom.js';
 import { api } from '../api.js';
+import { t } from '../i18n.js';
 
 export async function renderDoctor(container, app, online = false) {
   clear(container);
 
   const header = el('div', { class: 'banner' }, [
-    el('h2', { text: 'Diagnostics', style: 'margin:0' }),
+    el('h2', { text: t('web.tab.doctor'), style: 'margin:0' }),
     el('div', { style: 'display:flex;gap:8px' }, [
-      el('button', {
-        text: 'Run again',
-        onclick: () => renderDoctor(container, app),
-      }),
+      el('button', { text: t('web.runAgain'), onclick: () => renderDoctor(container, app) }),
       el('button', {
         class: 'primary',
-        text: 'Run with SSH probes',
+        text: t('web.runOnline'),
         onclick: () => renderDoctor(container, app, true),
       }),
     ]),
   ]);
   container.append(header);
 
-  container.append(el('div', { class: 'muted', text: 'checking…' }));
+  container.append(el('div', { class: 'muted', text: t('web.checking') }));
   let report;
   try {
     report = await api.doctor(online === true);
@@ -37,14 +35,16 @@ export async function renderDoctor(container, app, online = false) {
     ...report.results.filter((r) => r.level === 'ok'),
   ];
 
-  const summary = el('div', { class: 'card' }, [
-    el('div', { style: 'display:flex;gap:12px;align-items:center' }, [
-      tag('error', `${report.errors} errors`),
-      tag('warn', `${report.warnings} warnings`),
-      tag('ok', `${report.results.length - report.errors - report.warnings} ok`),
+  const passing = report.results.length - report.errors - report.warnings;
+  container.append(
+    el('div', { class: 'card' }, [
+      el('div', { style: 'display:flex;gap:12px;align-items:center' }, [
+        tag('error', t('web.errorsTag', report.errors)),
+        tag('warn', t('web.warningsTag', report.warnings)),
+        tag('ok', t('web.okTag', passing)),
+      ]),
     ]),
-  ]);
-  container.append(summary);
+  );
 
   for (const result of ordered) {
     const lines = [
@@ -54,7 +54,7 @@ export async function renderDoctor(container, app, online = false) {
       ]),
     ];
     if (result.detail) lines.push(el('div', { class: 'muted mono', text: result.detail }));
-    if (result.fix) lines.push(el('div', { class: 'mono', text: `fix: ${result.fix}` }));
+    if (result.fix) lines.push(el('div', { class: 'mono', text: result.fix }));
     container.append(el('div', { class: 'card' }, lines));
   }
 }

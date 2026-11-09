@@ -4,6 +4,7 @@ import { plan } from '../core/plan.ts';
 import { apply, HandEditError } from '../core/apply.ts';
 import { contractHome } from '../core/paths.ts';
 import type { Logger } from '../util/log.ts';
+import { t } from '../core/i18n.ts';
 
 export interface ApplyOptions {
   home?: string;
@@ -36,8 +37,8 @@ export async function applyCommand(opts: ApplyOptions): Promise<number> {
     if (opts.dryRun) {
       const changed = p.ops.filter((op) => op.kind !== 'unchanged');
       if (logger.isJson) logger.json({ dryRun: true, wouldChange: changed.map((op) => op.label) });
-      else if (changed.length === 0) logger.ok('no changes (already up to date)');
-      else for (const op of changed) logger.info(`would ${op.kind}: ${op.label}`);
+      else if (changed.length === 0) logger.ok(t('apply.noChanges'));
+      else for (const op of changed) logger.info(t('apply.wouldKind', op.kind, op.label));
       return 0;
     }
 
@@ -45,10 +46,10 @@ export async function applyCommand(opts: ApplyOptions): Promise<number> {
       logger.json(result);
     } else {
       if (result.written.length === 0) {
-        logger.ok('no changes (already up to date)');
+        logger.ok(t('apply.noChanges'));
       } else {
-        for (const b of result.backups) logger.dim(`backup ${contractHome(b, home)}`);
-        for (const w of result.written) logger.ok(`wrote ${w}`);
+        for (const b of result.backups) logger.dim(t('apply.backup', contractHome(b, home)));
+        for (const w of result.written) logger.ok(t('apply.wrote', w));
       }
       for (const e of result.errors) logger.error(`${e.file}: ${e.message}`);
     }

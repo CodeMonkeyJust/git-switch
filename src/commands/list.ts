@@ -4,6 +4,7 @@ import { loadProfiles } from '../core/profiles.ts';
 import { resolveIdentity, sitesFor } from '../core/model.ts';
 import { gsPaths, contractHome, normaliseRulePath } from '../core/paths.ts';
 import type { Logger } from '../util/log.ts';
+import { t } from '../core/i18n.ts';
 
 export interface ListOptions {
   home?: string;
@@ -65,7 +66,7 @@ export async function listCommand(opts: ListOptions): Promise<number> {
     return 0;
   }
 
-  logger.info('identities');
+  logger.info(t('list.identities'));
   const width = Math.max(10, ...profiles.identities.map((i) => i.name.length));
   for (const identity of result.identities) {
     const sites = identity.sites.map((s) => (s.port ? `${s.host}:${s.port}` : s.host)).join(', ');
@@ -75,24 +76,24 @@ export async function listCommand(opts: ListOptions): Promise<number> {
   }
 
   if (result.rules.length > 0) {
-    logger.info('directory rules');
+    logger.info(t('list.rules'));
     for (const rule of result.rules) logger.dim(`  ${rule.dir}  ->  ${rule.identity}`);
   }
 
   if (result.repositories.length > 0) {
-    logger.info('repository overrides');
+    logger.info(t('list.repositories'));
     for (const repo of result.repositories) logger.dim(`  ${repo.path}  ->  ${repo.identity}`);
   }
 
   if (result.resolved) {
-    logger.info('current directory');
+    logger.info(t('list.currentDir'));
     logger.dim(`  ${result.resolved.target}  ->  ${result.resolved.identity}  (${result.resolved.detail})`);
   } else {
-    logger.info('current directory');
-    logger.warn(`  ${contract(cwd)}  ->  no matching rule (falls back to the global identity)`);
+    logger.info(t('list.currentDir'));
+    logger.warn(`  ${t('list.noRule', contract(cwd))}`);
   }
 
-  logger.dim(`profile: ${contract(gsPaths(home).profiles)}`);
+  logger.dim(t('list.profile', contract(gsPaths(home).profiles)));
   return 0;
 }
 

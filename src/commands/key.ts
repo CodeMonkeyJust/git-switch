@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import { t } from '../core/i18n.ts';
 import { loadProfiles } from '../core/profiles.ts';
 import { generateKey, listKeys, publicKeyFor, copyToClipboard } from '../core/keys.ts';
 import { keysFromSnapshot, restoreKeys, readSnapshotFile } from '../core/key-restore.ts';
@@ -45,8 +46,8 @@ export async function keyCommand(opts: KeyOptions): Promise<number> {
         return 0;
       }
       if (keys.length === 0) {
-        logger.warn('no SSH keys found in ~/.ssh');
-        logger.dim('create one with: gs key gen <name> --comment "<email>"');
+        logger.warn(t('key.noKeys'));
+        logger.dim(`create one with: gs key gen <name> --comment "<email>"`);
         return 0;
       }
 
@@ -72,10 +73,10 @@ export async function keyCommand(opts: KeyOptions): Promise<number> {
           logger.json({ path: result.path, fingerprint: result.fingerprint ?? null });
           return 0;
         }
-        logger.ok(`created ~/.ssh/${name}`);
+        logger.ok(t('key.created', `~/.ssh/${name}`));
         if (result.fingerprint) logger.dim(`   ${result.fingerprint}`);
         const copied = await copyToClipboard(result.publicKey);
-        logger.info(copied ? 'public key copied to the clipboard' : 'public key (copy it manually):');
+        logger.info(copied ? t('key.copied') : t('key.copyManual'));
         if (!copied) logger.write(`${result.publicKey}\n`);
         return 0;
       } catch (err) {
@@ -96,9 +97,9 @@ export async function keyCommand(opts: KeyOptions): Promise<number> {
           logger.json({ key: opts.target, copied });
           return 0;
         }
-        if (copied) logger.ok(`public key for ${opts.target} copied to the clipboard`);
+        if (copied) logger.ok(t('key.copiedNamed', opts.target));
         else {
-          logger.warn('could not access the clipboard; here is the key:');
+          logger.warn(t('key.copyFailed'));
           logger.write(`${pub}\n`);
         }
         return 0;
@@ -135,7 +136,7 @@ export async function keyCommand(opts: KeyOptions): Promise<number> {
 
       const keys = keysFromSnapshot(snapshot as { files: { path: string; content: string }[] });
       if (keys.length === 0) {
-        logger.warn('this snapshot contains no keys (export it with --with-keys)');
+        logger.warn(t('key.noKeysInSnapshot'));
         return 1;
       }
 
@@ -144,19 +145,19 @@ export async function keyCommand(opts: KeyOptions): Promise<number> {
         logger.json(result);
         return 0;
       }
-      for (const name of result.written) logger.ok(`restored ~/.ssh/${name}`);
+      for (const name of result.written) logger.ok(t('key.restored', `~/.ssh/${name}`));
       for (const name of result.skipped) {
-        logger.warn(`~/.ssh/${name} already exists; pass --force to overwrite`);
+        logger.warn(t('key.restoreSkipped', `~/.ssh/${name}`));
       }
       if (result.written.some((n) => !n.endsWith('.pub'))) {
-        logger.dim('private keys were restored with mode 600');
+        logger.dim(t('key.restoredMode'));
       }
       return 0;
     }
 
     default:
-      logger.error(`unknown key subcommand: ${opts.subcommand}`);
-      logger.dim('available: list, gen, copy');
+      logger.error(t('key.unknown', String(opts.subcommand)));
+      logger.dim(t('key.available'));
       return 2;
   }
 }

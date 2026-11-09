@@ -1,4 +1,5 @@
 import { readdir, readFile } from 'node:fs/promises';
+import { t } from '../core/i18n.ts';
 import path from 'node:path';
 import { homedir } from 'node:os';
 import { discover, canonicalHost, sshKeyName, type Discovery } from '../core/discover.ts';
@@ -63,32 +64,32 @@ export async function initCommand(opts: InitOptions): Promise<number> {
     return 0;
   }
 
-  logger.info('detected');
-  logger.dim(`  git identity   ${found.gitUser ? `${found.gitUser.name} <${found.gitUser.email}>` : 'none (global user.name/email not set)'}`);
-  logger.dim(`  ssh hosts      ${found.hosts.length}`);
-  logger.dim(`  repositories   ${found.repos.length}`);
+  logger.info(t('init.detected'));
+  logger.dim(`  ${t('init.gitIdentity').padEnd(14)}${found.gitUser ? `${found.gitUser.name} <${found.gitUser.email}>` : t('init.noGitIdentity')}`);
+  logger.dim(`  ${t('init.sshHosts').padEnd(14)}${found.hosts.length}`);
+  logger.dim(`  ${t('init.repositories').padEnd(14)}${found.repos.length}`);
 
   // discovery warnings belong to the "detected" section, not above it
   for (const warning of found.warnings) logger.warn(warning);
 
   if (profiles.identities.length === 0) {
-    logger.error('could not determine any identity: set user.name and user.email in git first');
+    logger.error(t('init.noIdentity'));
     return 2;
   }
 
-  logger.info('proposed identities');
+  logger.info(t('init.proposedIdentities'));
   for (const identity of profiles.identities) {
     const keys = profiles.sites.filter((s) => s.identity === identity.name).map((s) => s.host);
     logger.dim(`  ${identity.name.padEnd(12)} ${identity.user.name} <${identity.user.email}>${keys.length ? `  → ${keys.join(', ')}` : ''}`);
   }
 
   if (profiles.rules.length > 0) {
-    logger.info('proposed rules');
+    logger.info(t('init.proposedRules'));
     for (const rule of profiles.rules) {
       logger.dim(`  ${contractHome(rule.dir, home)}  →  ${rule.identity}`);
     }
   } else {
-    logger.warn('no directory rules could be inferred; add them to profiles.yaml');
+    logger.warn(t('init.noRules'));
   }
 
   // A site with no IdentityFile in ~/.ssh/config may still work: ssh falls back
@@ -98,7 +99,7 @@ export async function initCommand(opts: InitOptions): Promise<number> {
   if (!opts.offline) {
     probedKeys = await probeMissingKeys(profiles, { home, logger });
     if (probedKeys > 0) {
-      logger.info('SSH keys discovered by probing');
+      logger.info(t('init.keysDiscovered'));
       for (const identity of profiles.identities) {
         if (identity.sshKey) logger.dim(`   ${identity.name}  ->  ${identity.sshKey}`);
       }
@@ -114,16 +115,10 @@ export async function initCommand(opts: InitOptions): Promise<number> {
     // second case is usually a permission or known_hosts problem, and pointing at
     // `doctor` is far more useful than asking for a key that already exists.
     if (!opts.offline && anyKeysOnDisk) {
-      logger.warn(
-        `${site.host}: no key in ~/.ssh was accepted; the key may be missing, ` +
-          `or its permissions may be too open`,
-      );
-      logger.dim('   run `gs doctor --online` for the exact reason and a fix');
+      logger.warn(t('init.noKeyAccepted', site.host));
+      logger.dim(`   ${t('init.noKeyAcceptedHint')}`);
     } else {
-      logger.warn(
-        `${site.host}: no SSH key works yet; add sshKey to the identity in profiles.yaml ` +
-          `(gs doctor --online shows the details)`,
-      );
+      logger.warn(t('init.noKeyWorks', site.host));
     }
   }
 
@@ -139,18 +134,18 @@ export async function initCommand(opts: InitOptions): Promise<number> {
       ),
     );
 
-    logger.warn(`all ${profiles.identities.length} identities were given the global email ${only}`);
+    logger.warn(t('init.sharedEmail', profiles.identities.length, only));
     if (likelyPersonal.length > 0) {
-      logger.dim(`   likely personal: ${likelyPersonal.map((i) => i.name).join(', ')}`);
-      logger.dim('   edit ~/.config/gs/profiles.yaml and set user.email per identity, then re-run gs apply');
+      logger.dim(`   ${t('init.sharedEmailPersonal', likelyPersonal.map((i) => i.name).join(', '))}`);
+      logger.dim(`   ${t('init.sharedEmailHint')}`);
     } else {
-      logger.dim('   edit ~/.config/gs/profiles.yaml and set user.email per identity');
+      logger.dim(`   ${t('init.sharedEmailHint')}`);
     }
   }
 
   await saveProfiles(home, profiles);
-  logger.ok(`wrote ${contractHome(paths.profiles, home)}`);
-  logger.dim('next: review identities/emails above, then: gs diff   then   gs apply');
+  logger.ok(t('init.wrote', contractHome(paths.profiles, home)));
+  logger.dim(t('init.next'));
   return 0;
 }
 

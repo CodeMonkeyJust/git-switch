@@ -1,6 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom } from '../helpers/dom-shim.mjs';
+import { webCatalogue, setLanguage } from '../../src/core/i18n.ts';
+
+// The views render through the shared catalogue; load the real one so assertions
+// compare against user-visible text rather than raw keys.
+setLanguage('en');
+const EN = webCatalogue();
+
+async function loadI18n(catalogue = EN) {
+  const i18n = await import('../../web/src/i18n.js');
+  i18n.setMessages(catalogue, 'en');
+  return i18n;
+}
 
 /**
  * Execute the real GUI modules against a DOM shim.
@@ -67,6 +79,7 @@ const STATE = {
 test('the overview view renders identities and their sites', async () => {
   resetModules();
   const dom = installDom();
+  await loadI18n();
   installFetch({ '/api/state': STATE });
   const { renderOverview } = await import('../../web/src/views/overview.js');
 
@@ -84,6 +97,7 @@ test('the overview view renders identities and their sites', async () => {
 test('the rules view lists rules and offers to add one', async () => {
   resetModules();
   const dom = installDom();
+  await loadI18n();
   installFetch({ '/api/state': STATE, '/api/fs': { dir: '/code', roots: ['~'], entries: [] } });
   const { renderRules } = await import('../../web/src/views/rules.js');
 
@@ -99,6 +113,7 @@ test('the rules view lists rules and offers to add one', async () => {
 test('the preview view shows the diff and an apply button', async () => {
   resetModules();
   const dom = installDom();
+  await loadI18n();
   installFetch({
     '/api/plan': {
       dirty: true,
@@ -124,6 +139,7 @@ test('the preview view shows the diff and an apply button', async () => {
 test('the preview view reports a clean plan without an apply button', async () => {
   resetModules();
   const dom = installDom();
+  await loadI18n();
   installFetch({ '/api/plan': { dirty: false, errors: [], warnings: [], files: [] } });
   const { renderPreview } = await import('../../web/src/views/preview.js');
 
@@ -137,6 +153,7 @@ test('the preview view reports a clean plan without an apply button', async () =
 test('the doctor view renders every check level', async () => {
   resetModules();
   const dom = installDom();
+  await loadI18n();
   installFetch({
     '/api/doctor': {
       errors: 1,
@@ -162,6 +179,7 @@ test('the doctor view renders every check level', async () => {
 test('a failing API call surfaces an error instead of throwing', async () => {
   resetModules();
   const dom = installDom();
+  await loadI18n();
   globalThis.fetch = (async () => ({
     ok: false,
     status: 500,

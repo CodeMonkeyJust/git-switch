@@ -46,6 +46,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Bilingual output (English / Simplified Chinese).** Every CLI message and every
+  GUI label now comes from a catalogue. Language precedence is
+  `--lang <en|zh-CN>` → `GS_LANG` → the OS locale → English. The GUI receives
+  only its own `web.*` strings with `/api/state`, so one switch covers both
+  surfaces. A missing translation falls back to English, then to the key, so a
+  stale catalogue can never break the CLI.
+
+
 - `gs key restore <snapshot> [--force]` — write the keys embedded by
   `snapshot export --with-keys` back into `~/.ssh`. Previously the export
   embedded key material and nothing could ever read it back: `--with-keys` was a

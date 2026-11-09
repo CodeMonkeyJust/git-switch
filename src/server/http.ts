@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { authorize, createToken, hostIsAllowed, originIsAllowed } from './auth.ts';
 import { browse } from './fs-browse.ts';
+import { t, setLanguage, getLanguage, resolveLanguage, webCatalogue } from '../core/i18n.ts';
 import { loadProfiles, parseProfilesText, saveProfiles } from '../core/profiles.ts';
 import { plan } from '../core/plan.ts';
 import { apply } from '../core/apply.ts';
@@ -175,8 +176,7 @@ async function serveStatic(res: ServerResponse, pathname: string): Promise<void>
   if (!webRoot) {
     sendJson(res, 500, {
       error:
-        'GUI assets not found. If you are running from a checkout, make sure the web/ ' +
-        'directory is present; for a packaged install, reinstall git-switch.',
+        t('gui.assetsMissing'),
     });
     return;
   }
@@ -246,8 +246,16 @@ async function handleApi(
       const profiles = await loadProfiles(ctx.home);
       const dir = url.searchParams.get('dir');
       const resolution = dir ? resolveIdentity(profiles, normaliseRulePath(dir, ctx.home)) : undefined;
+
+      // The UI reads its strings from the catalogue so a single language switch
+      // covers both CLI and browser.
+      const requested = url.searchParams.get('lang');
+      if (requested) setLanguage(resolveLanguage(requested));
+
       sendJson(res, 200, {
         home: contractHome(ctx.home, ctx.home),
+        language: getLanguage(),
+        messages: webCatalogue(),
         ...profileSummary(ctx.home, profiles),
         ...(resolution
           ? { resolved: { identity: resolution.identity.name, reason: resolution.reason, detail: resolution.detail } }

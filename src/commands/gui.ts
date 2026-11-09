@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { t } from '../core/i18n.ts';
 import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -72,8 +73,8 @@ export async function guiCommand(opts: GuiOptions): Promise<number> {
   const existing = await readLock(home);
   if (existing && processAlive(existing.pid) && existing.pid !== process.pid) {
     const url = `http://127.0.0.1:${existing.port}/`;
-    logger.warn(`gs gui is already running on port ${existing.port}`);
-    logger.dim(`open ${url} in your browser (restart that instance to get a fresh token)`);
+    logger.warn(t('gui.alreadyRunning', existing.port));
+    logger.dim(t('gui.alreadyRunningHint', url));
     if (opts.open !== false) openBrowser(url);
     return 0;
   }
@@ -101,10 +102,10 @@ export async function guiCommand(opts: GuiOptions): Promise<number> {
   if (opts.json) {
     logger.json({ url: server.url, port: server.port, pid: process.pid });
   } else {
-    logger.ok(`GUI listening on http://127.0.0.1:${server.port}/`);
-    logger.dim('the token is embedded in the URL fragment; open the printed link');
+    logger.ok(t('gui.listening', `http://127.0.0.1:${server.port}/`));
+    logger.dim(t('gui.tokenHint'));
     if (opts.open !== false) {
-      logger.dim('opening your browser…');
+      logger.dim(t('gui.opening'));
       logger.dim(`  ${server.url}`);
     }
   }
@@ -115,7 +116,7 @@ export async function guiCommand(opts: GuiOptions): Promise<number> {
   if (idleMinutes > 0) {
     const timer = setInterval(() => {
       if (Date.now() - lastActivity > idleMinutes * 60_000) {
-        logger.info(`no activity for ${idleMinutes} minutes, shutting down`);
+        logger.info(t('gui.idleExit', idleMinutes));
         void cleanup().then(() => process.exit(0));
       }
     }, 30_000);

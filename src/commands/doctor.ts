@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import { t } from '../core/i18n.ts';
 import { loadProfiles } from '../core/profiles.ts';
 import { runDoctor, type CheckResult } from '../core/checks.ts';
 import type { Logger } from '../util/log.ts';
@@ -41,7 +42,7 @@ export async function doctorCommand(opts: DoctorOptions): Promise<number> {
   }
 
   const passing = results.length - errors.length - warnings.length;
-  logger.info(`${passing} ok · ${warnings.length} warnings · ${errors.length} errors`);
+  logger.info(t('doctor.summary', passing, warnings.length, errors.length));
 
   return errors.length > 0 ? 2 : 0;
 }

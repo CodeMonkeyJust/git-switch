@@ -10,7 +10,7 @@
 
 import { spawn } from 'node:child_process';
 
-const MIN_TESTS = Number.parseInt(process.env.GS_MIN_TESTS ?? '267', 10);
+const MIN_TESTS = Number.parseInt(process.env.GS_MIN_TESTS ?? '271', 10);
 const patterns = process.argv.slice(2);
 
 if (patterns.length === 0) {

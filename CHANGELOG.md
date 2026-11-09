@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The GUI could not be opened at all.** `gs gui` printed a URL like
+  `http://127.0.0.1:PORT/#token=…`, but the server required the token for the
+  index page too. A browser never sends the URL fragment, so the first request
+  for `/` was answered with `{"error":"missing or invalid token"}` and the app
+  never loaded. Static assets are now served to loopback without a token
+  (`Host`/`Origin` are still enforced), while every `/api/*` request keeps
+  requiring it.
 - `gs init` now distinguishes "no key exists" from "keys exist but none was
   accepted". The second case is usually a permission or known-hosts problem, and
   the message now says so and points at `gs doctor --online` instead of asking

@@ -9,7 +9,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { authorize, createToken } from './auth.ts';
+import { authorize, createToken, hostIsAllowed, originIsAllowed } from './auth.ts';
 import { browse } from './fs-browse.ts';
 import { loadProfiles, parseProfilesText, saveProfiles } from '../core/profiles.ts';
 import { plan } from '../core/plan.ts';
@@ -137,17 +137,37 @@ const CONTENT_TYPES: Record<string, string> = {
 
 async function handle(req: IncomingMessage, res: ServerResponse, ctx: Ctx): Promise<void> {
   const url = new URL(req.url ?? '/', `http://127.0.0.1:${ctx.port}`);
-  const auth = authorize(req, ctx.token, ctx.port);
-  if (!auth.ok) {
-    sendJson(res, auth.status ?? 401, { error: auth.reason });
-    return;
-  }
 
+  // The index page must load *before* the browser knows the token: the URL
+  // fragment (#token=…) is never sent to the server, so the very first request
+  // for "/" cannot carry it. Static assets are therefore public to loopback;
+  // Host/Origin are still enforced, and everything under /api still requires a
+  // token.
   if (url.pathname.startsWith('/api/')) {
+    const auth = authorize(req, ctx.token, ctx.port);
+    if (!auth.ok) {
+      sendJson(res, auth.status ?? 401, { error: auth.reason });
+      return;
+    }
     await handleApi(req, res, ctx, url);
     return;
   }
+
+  // static: Host/Origin checks only (no token)
+  if (!hostIsAllowed(headerOf(req, 'host'), ctx.port)) {
+    sendJson(res, 403, { error: 'invalid Host header' });
+    return;
+  }
+  if (!originIsAllowed(headerOf(req, 'origin'), ctx.port)) {
+    sendJson(res, 403, { error: 'cross-origin request rejected' });
+    return;
+  }
   await serveStatic(res, url.pathname);
+}
+
+function headerOf(req: IncomingMessage, name: string): string | undefined {
+  const value = req.headers[name];
+  return Array.isArray(value) ? value[0] : value;
 }
 
 async function serveStatic(res: ServerResponse, pathname: string): Promise<void> {

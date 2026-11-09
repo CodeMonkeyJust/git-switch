@@ -117,6 +117,50 @@ test('API rejects requests without a token', async () => {
   });
 });
 
+test('the page loads without a token, as a real browser first hop must', async () => {
+  // The URL fragment (#token=…) is never sent to the server, so the very first
+  // request for "/" cannot carry the token. Requiring it made the GUI show
+  // {"error":"missing or invalid token"} instead of the app.
+  await withServer(async ({ base }) => {
+    const page = await fetch(`${base}/`);
+    assert.equal(page.status, 200, 'the index page must load without a token');
+    const html = await page.text();
+    assert.match(html, /data-view="overview"/);
+  });
+});
+
+test('every static asset a browser imports loads without a token', async () => {
+  await withServer(async ({ base }) => {
+    const assets = [
+      '/src/main.js',
+      '/src/api.js',
+      '/src/views/overview.js',
+      '/src/views/rules.js',
+      '/src/views/preview.js',
+      '/src/views/doctor.js',
+      '/src/styles/main.css',
+    ];
+    for (const asset of assets) {
+      const res = await fetch(`${base}${asset}`);
+      assert.equal(res.status, 200, `${asset} must be served without a token`);
+    }
+  });
+});
+
+test('the served HTML never contains the token', async () => {
+  await withServer(async ({ base, server }) => {
+    const html = await (await fetch(`${base}/`)).text();
+    assert.ok(!html.includes(server.token), 'the token must stay in the fragment, not in the document');
+  });
+});
+
+test('static files still reject a foreign Origin', async () => {
+  await withServer(async ({ base }) => {
+    const res = await fetch(`${base}/`, { headers: { origin: 'http://evil.example' } });
+    assert.equal(res.status, 403);
+  });
+});
+
 test('API rejects a cross-origin request', async () => {
   await withServer(async ({ base, auth }) => {
     const res = await fetch(`${base}/api/state`, { headers: { ...auth, origin: 'http://evil.example' } });

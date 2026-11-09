@@ -28,7 +28,8 @@
     "prepare": "node scripts/build.mjs",
     "verify:dist": "node scripts/verify-dist.mjs",
     "audit:coverage": "node scripts/coverage-audit.mjs",
-    "smoke:gui": "node scripts/smoke-gui.mjs"
+    "smoke:gui": "node scripts/smoke-gui.mjs",
+    "smoke:gui-browser": "node scripts/smoke-gui-browser.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

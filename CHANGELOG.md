@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`gs doctor --online` reported a false authentication failure before the
+  first `gs apply`.** It probed the generated host alias, which only exists once
+  the managed block has been written, so ssh answered "Could not resolve
+  hostname" and a perfectly good profile looked broken. The check now uses the
+  alias only when it is actually defined in `~/.ssh/config`, otherwise it probes
+  the real host with the key and user pinned explicitly.
+- An unresolvable host is now reported as a warning with "could not be
+  resolved", not as an authentication failure.
+- Private key permissions are checked on **Windows** too. OpenSSH refuses keys
+  readable by another principal ("Bad permissions. Try removing permissions for
+  user: …"), which previously went undetected: the check only ran on POSIX. The
+  ACL is inspected via `icacls`, with `Administrators`, `SYSTEM` and the current
+  account correctly treated as expected, and a concrete `icacls` fix suggested.
+
 ### Security
 
 - **The secret guard now catches credentials that previously slipped through.**

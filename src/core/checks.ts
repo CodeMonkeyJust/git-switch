@@ -109,11 +109,16 @@ export async function checkKeys(home: string, profiles: Profiles): Promise<Check
 }
 
 /**
- * OpenSSH refuses keys readable by others. On Windows the POSIX mode bits are
- * not authoritative, so we only report what we can prove.
+ * OpenSSH refuses keys readable by others. On POSIX the mode bits tell the story;
+ * on Windows the ACL does, and a key created inside a directory that grants
+ * inherited access to another principal triggers
+ * "Bad permissions. Try removing permissions for user: …".
  */
 async function checkPrivateKeyPermissions(file: string, mode: number): Promise<CheckResult | undefined> {
-  if (process.platform === 'win32') return undefined;
+  if (process.platform === 'win32') {
+    return checkWindowsKeyAcl(file);
+  }
+
   const perms = mode & 0o777;
   if (perms === 0o600 || perms === 0o400) {
     return { id: `perm:${file}`, level: 'ok', title: `${path.basename(file)} permissions ${perms.toString(8)}` };
@@ -125,6 +130,68 @@ async function checkPrivateKeyPermissions(file: string, mode: number): Promise<C
     detail: 'sshd may refuse the key; OpenSSH expects 600',
     fix: `chmod 600 "${file}"`,
   };
+}
+
+/**
+ * Report Windows ACL grants beyond the owner. `icacls` is used instead of a
+ * native module to keep the zero-dependency promise.
+ *
+ * Administrators and SYSTEM always have access on Windows and OpenSSH accepts
+ * that; what breaks it is an additional interactive principal (another user, or
+ * a group like `Users`/`CodexSandboxUsers`) inheriting read access.
+ *
+ * Note the output shape: the file path and the FIRST grant share the first line,
+ * so parsing has to strip the path rather than skip line 0.
+ */
+async function checkWindowsKeyAcl(file: string): Promise<CheckResult | undefined> {
+  const name = path.basename(file);
+  try {
+    const { stdout } = await run('icacls', [file], { timeout: 5000, windowsHide: true });
+
+    const grants: string[] = [];
+    for (const rawLine of stdout.split(/\r?\n/)) {
+      let line = rawLine.trim();
+      if (line === '' || line.startsWith('Successfully processed') || line.startsWith('Failed processing')) {
+        continue;
+      }
+      // the first line begins with the absolute path
+      if (line.toLowerCase().startsWith(file.toLowerCase())) {
+        line = line.slice(file.length).trim();
+        if (line === '') continue;
+      }
+      const m = /^(.+?):\(/.exec(line);
+      if (m && m[1]) grants.push(m[1].trim());
+    }
+
+    const identity = (await run('whoami', [], { timeout: 5000, windowsHide: true }).catch(() => ({ stdout: '' })))
+      .stdout.trim()
+      .toLowerCase();
+
+    const EXPECTED =
+      /^(NT AUTHORITY\\(SYSTEM|LOCAL SERVICE|NETWORK SERVICE)|BUILTIN\\Administrators|APPLICATION PACKAGE AUTHORITY)/i;
+
+    const unexpected = grants.filter((principal) => {
+      if (EXPECTED.test(principal)) return false;
+      if (identity && principal.toLowerCase() === identity) return false;
+      return true;
+    });
+
+    if (unexpected.length > 0) {
+      return {
+        id: `perm:${file}`,
+        level: 'warn',
+        title: `${name} is accessible to other principals`,
+        detail:
+          `additional grants: ${unexpected.join(', ')}. ` +
+          'OpenSSH can refuse the key with "Bad permissions".',
+        fix: `icacls "${file}" /inheritance:r /grant:r "%USERNAME%:F"`,
+      };
+    }
+
+    return { id: `perm:${file}`, level: 'ok', title: `${name} ACL is restricted to its owner` };
+  } catch {
+    return undefined; // icacls unavailable: nothing provable
+  }
 }
 
 /** The generated ssh block must reference keys that exist. */
@@ -303,6 +370,9 @@ export async function checkConnectivity(
   timeoutMs = 10_000,
 ): Promise<CheckResult[]> {
   const results: CheckResult[] = [];
+  const sshConfigText = (await readFileIfExists(path.join(home, '.ssh', 'config'))) ?? '';
+  const definedHosts = hostNamesIn(sshConfigText);
+
   for (const site of profiles.sites) {
     const key = keyForSite(profiles, site);
     if (!key || !(await exists(path.join(home, '.ssh', key)))) {
@@ -314,33 +384,62 @@ export async function checkConnectivity(
       });
       continue;
     }
-    const target = site.alias ?? site.host;
+
+    // The generated alias only exists after `gs apply`. Probing it before that
+    // fails with "Could not resolve hostname", which is a misleading diagnosis
+    // of a profile that is perfectly fine. Fall back to the real host, pinning
+    // the key and user explicitly so the probe is meaningful either way.
+    const aliasUsable = site.alias !== undefined && definedHosts.has(site.alias.toLowerCase());
+    const target = aliasUsable ? (site.alias as string) : site.host;
+    const args = [
+      '-T',
+      '-o', 'BatchMode=yes',
+      '-o', 'StrictHostKeyChecking=accept-new',
+      '-o', `ConnectTimeout=${Math.ceil(timeoutMs / 1000)}`,
+    ];
+    if (!aliasUsable) {
+      args.push('-o', 'IdentitiesOnly=yes', '-i', path.join(home, '.ssh', key));
+    }
+    args.push('-p', String(site.port ?? 22), `${site.user ?? 'git'}@${target}`);
+
     try {
-      const { stderr } = await run(
-        'ssh',
-        ['-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new',
-         '-o', `ConnectTimeout=${Math.ceil(timeoutMs / 1000)}`, '-p', String(site.port ?? 22), target],
-        { timeout: timeoutMs, env: { ...process.env, HOME: home, USERPROFILE: home } },
-      );
+      const { stderr } = await run('ssh', args, {
+        timeout: timeoutMs,
+        env: { ...process.env, HOME: home, USERPROFILE: home },
+      });
       results.push({
         id: `ssh:${site.host}`,
         level: 'ok',
         title: `${site.host}: authenticated`,
-        detail: firstLine(stderr),
+        detail: firstLine(stderr) || (aliasUsable ? `via alias ${target}` : `via ${key}`),
       });
     } catch (err) {
       const stderr = (err as { stderr?: string }).stderr ?? (err as Error).message;
       const message = firstLine(stderr);
+      const isUnresolved = /could not resolve hostname|name or service not known/i.test(message);
       results.push({
         id: `ssh:${site.host}`,
-        level: 'error',
-        title: `${site.host}: authentication failed`,
+        level: isUnresolved ? 'warn' : 'error',
+        title: isUnresolved
+          ? `${site.host}: could not be resolved`
+          : `${site.host}: authentication failed`,
         detail: message,
-        fix: `ssh -T -p ${site.port ?? 22} ${target}`,
+        fix: `ssh -T -p ${site.port ?? 22} -i ~/.ssh/${key} ${site.user ?? 'git'}@${target}`,
       });
     }
   }
   return results;
+}
+
+/** Host patterns declared in an ssh config file (lower-cased). */
+export function hostNamesIn(configText: string): Set<string> {
+  const names = new Set<string>();
+  for (const line of configText.split(/\r?\n/)) {
+    const m = /^\s*Host\s+(.+)$/i.exec(line.replace(/#.*$/, ''));
+    if (!m || !m[1]) continue;
+    for (const name of m[1].trim().split(/\s+/)) names.add(name.toLowerCase());
+  }
+  return names;
 }
 
 function firstLine(text: unknown): string {

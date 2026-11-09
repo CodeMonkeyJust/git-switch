@@ -6,19 +6,33 @@
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { authorize, createToken, hostIsAllowed, originIsAllowed } from './auth.ts';
 import { browse } from './fs-browse.ts';
 import { t, setLanguage, getLanguage, resolveLanguage, webCatalogue } from '../core/i18n.ts';
-import { loadProfiles, parseProfilesText, saveProfiles } from '../core/profiles.ts';
+import { loadProfiles, parseProfilesText, saveProfiles, profilesExist } from '../core/profiles.ts';
 import { plan } from '../core/plan.ts';
 import { apply } from '../core/apply.ts';
 import { runDoctor } from '../core/checks.ts';
 import { resolveIdentity, sitesFor, type Profiles } from '../core/model.ts';
 import { gsPaths, contractHome, normaliseRulePath } from '../core/paths.ts';
 import { unifiedDiff } from '../util/diff.ts';
+import { writeFileAtomic } from '../util/fs-atomic.ts';
+import { listKeys, generateKey, publicKeyFor, copyToClipboard } from '../core/keys.ts';
+import { keysFromSnapshot, restoreKeys, readSnapshotFile } from '../core/key-restore.ts';
+import {
+  buildSnapshot,
+  encryptSnapshot,
+  decryptSnapshot,
+  verifySnapshot,
+  parseRemap,
+  remapProfiles,
+  assertNoPlaintextKeys,
+} from '../core/snapshot.ts';
+import { discover } from '../core/discover.ts';
+import { buildProfiles } from '../commands/init.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -256,6 +270,7 @@ async function handleApi(
         home: contractHome(ctx.home, ctx.home),
         language: getLanguage(),
         messages: webCatalogue(),
+        profileExists: await profilesExist(ctx.home),
         ...profileSummary(ctx.home, profiles),
         ...(resolution
           ? { resolved: { identity: resolution.identity.name, reason: resolution.reason, detail: resolution.detail } }
@@ -456,6 +471,259 @@ async function handleApi(
       }
 
       sendJson(res, 400, { error: 'expected {add:…} or ?remove=<name>' });
+      return;
+    }
+
+    /* ---------------- keys ---------------- */
+
+    if (url.pathname === '/api/keys' && method === 'GET') {
+      const profiles = await loadProfiles(ctx.home);
+      const keys = await listKeys({ home: ctx.home, profiles });
+      // never return key material: fingerprints and paths only
+      sendJson(res, 200, {
+        keys: keys.map((k) => ({
+          name: k.name,
+          type: k.type ?? null,
+          fingerprint: k.fingerprint ?? null,
+          comment: k.comment ?? null,
+          hasPublic: k.hasPublic,
+          usedBy: k.usedBy,
+        })),
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/keys' && method === 'POST') {
+      const body = (await readBody(req)) as { action?: string; name?: string; comment?: string; snapshot?: string; force?: boolean } | undefined;
+      const action = body?.action;
+
+      if (action === 'copy') {
+        const name = (body?.name ?? '').trim();
+        if (name === '') {
+          sendJson(res, 400, { error: 'name is required' });
+          return;
+        }
+        const pub = await publicKeyFor(ctx.home, name);
+        const copied = await copyToClipboard(pub);
+        sendJson(res, 200, { copied, publicKey: copied ? undefined : pub });
+        return;
+      }
+
+      if (action === 'generate') {
+        const name = (body?.name ?? '').trim();
+        if (name === '') {
+          sendJson(res, 400, { error: 'name is required' });
+          return;
+        }
+        const comment = (body?.comment ?? '').trim();
+        const result = await generateKey({
+          home: ctx.home,
+          name,
+          ...(comment !== '' ? { comment } : {}),
+        });
+        // the public key goes to the clipboard, the private one never leaves ~/.ssh
+        const copied = await copyToClipboard(result.publicKey);
+        sendJson(res, 200, {
+          path: result.path,
+          fingerprint: result.fingerprint ?? null,
+          copied,
+          publicKey: copied ? undefined : result.publicKey,
+        });
+        return;
+      }
+
+      if (action === 'restore') {
+        const snapshotPath = (body?.snapshot ?? '').trim();
+        if (snapshotPath === '') {
+          sendJson(res, 400, { error: 'snapshot is required' });
+          return;
+        }
+        const text = await readSnapshotFile(snapshotPath);
+        if (text === undefined) {
+          sendJson(res, 400, { error: t('snapshot.cannotRead', snapshotPath) });
+          return;
+        }
+        let snapshot;
+        try {
+          if (text.trimStart().startsWith('{') && text.includes('"magic"')) {
+            const passphrase = (body as { passphrase?: string }).passphrase ?? '';
+            if (passphrase === '') {
+              sendJson(res, 400, { error: 'passphrase is required for an encrypted snapshot' });
+              return;
+            }
+            snapshot = await decryptSnapshot(text, passphrase);
+          } else {
+            snapshot = JSON.parse(text);
+          }
+        } catch (err) {
+          sendJson(res, 400, { error: (err as Error).message });
+          return;
+        }
+        const keys = keysFromSnapshot(snapshot as { files: { path: string; content: string }[] });
+        if (keys.length === 0) {
+          sendJson(res, 400, { error: t('key.noKeysInSnapshot') });
+          return;
+        }
+        const result = await restoreKeys({ home: ctx.home, keys, ...(body?.force ? { force: true } : {}) });
+        sendJson(res, 200, result);
+        return;
+      }
+
+      sendJson(res, 400, { error: 'expected {action: copy|generate|restore}' });
+      return;
+    }
+
+    /* ---------------- snapshots ---------------- */
+
+    if (url.pathname === '/api/snapshot/export' && method === 'POST') {
+      const body = (await readBody(req)) as
+        | { path?: string; withKeys?: boolean; passphrase?: string; force?: boolean }
+        | undefined;
+      const profiles = await loadProfiles(ctx.home);
+      const target = (body?.path ?? '').trim();
+
+      const snapshot = await buildSnapshot({
+        home: ctx.home,
+        profiles,
+        includeKeys: body?.withKeys === true,
+      });
+
+      let output: string;
+      if (snapshot.manifest.containsKeys || (body?.passphrase ?? '') !== '') {
+        const passphrase = body?.passphrase ?? '';
+        if (passphrase === '') {
+          sendJson(res, 400, { error: t('web.passphraseHint') });
+          return;
+        }
+        output = await encryptSnapshot(snapshot, passphrase);
+      } else {
+        assertNoPlaintextKeys(snapshot);
+        output = JSON.stringify(snapshot, null, 2);
+      }
+
+      const destination =
+        target !== ''
+          ? path.resolve(ctx.home, target)
+          : path.join(gsPaths(ctx.home).snapshotsDir, `gs-snapshot-${Date.now()}.gsnap`);
+
+      if (!body?.force) {
+        const existing = await readFile(destination, 'utf8').catch(() => undefined);
+        if (existing !== undefined) {
+          sendJson(res, 409, { error: t('snapshot.exists', destination) });
+          return;
+        }
+      }
+
+      await mkdir(path.dirname(destination), { recursive: true });
+      await writeFileAtomic(destination, output);
+      sendJson(res, 200, {
+        path: destination,
+        files: snapshot.files.length,
+        identities: profiles.identities.length,
+        rules: profiles.rules.length,
+        containsKeys: snapshot.manifest.containsKeys,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/snapshot/import' && method === 'POST') {
+      const body = (await readBody(req)) as
+        | { path?: string; passphrase?: string; remaps?: string; force?: boolean }
+        | undefined;
+      const source = (body?.path ?? '').trim();
+      if (source === '') {
+        sendJson(res, 400, { error: t('web.importPath') });
+        return;
+      }
+      const text = await readSnapshotFile(path.resolve(ctx.home, source));
+      if (text === undefined) {
+        sendJson(res, 400, { error: t('snapshot.cannotRead', source) });
+        return;
+      }
+
+      let snapshot;
+      try {
+        if (text.trimStart().startsWith('{') && text.includes('"magic"')) {
+          snapshot = await decryptSnapshot(text, body?.passphrase ?? '');
+        } else {
+          snapshot = JSON.parse(text);
+        }
+      } catch (err) {
+        sendJson(res, 400, { error: (err as Error).message });
+        return;
+      }
+
+      const verdict = verifySnapshot(snapshot, ctx.home);
+      if (!verdict.ok || !verdict.profiles) {
+        sendJson(res, 400, { error: verdict.problems.join('; ') || 'invalid snapshot' });
+        return;
+      }
+
+      const spec = (body?.remaps ?? '').split(',').map((s) => s.trim()).filter((s) => s !== '');
+      let mapped;
+      try {
+        mapped = remapProfiles(verdict.profiles, parseRemap(spec));
+      } catch (err) {
+        sendJson(res, 400, { error: (err as Error).message });
+        return;
+      }
+
+      // importing replaces the profile; the caller has already confirmed
+      await saveProfiles(ctx.home, mapped);
+      sendJson(res, 200, {
+        hasKeys: snapshot.manifest.containsKeys,
+        ...profileSummary(ctx.home, mapped),
+      });
+      return;
+    }
+
+    /* ---------------- init ---------------- */
+
+    if (url.pathname === '/api/init/scan' && method === 'POST') {
+      const body = (await readBody(req)) as { root?: string; offline?: boolean } | undefined;
+      const root = (body?.root ?? '').trim();
+      const found = await discover({
+        home: ctx.home,
+        ...(root !== '' ? { scanRoots: [path.resolve(ctx.home, root)] } : {}),
+        cwd: root !== '' ? path.resolve(ctx.home, root) : ctx.home,
+      });
+      const profiles = buildProfiles(found, {
+        home: ctx.home,
+        roots: root !== '' ? [path.resolve(ctx.home, root)] : [],
+        groups: ['gitee', 'github', 'gitlab', 'bitbucket', 'company', 'work'],
+      });
+      sendJson(res, 200, {
+        warnings: found.warnings,
+        identities: profiles.identities.map((i) => ({
+          name: i.name,
+          email: i.user.email,
+          sshKey: i.sshKey ?? null,
+          sites: profiles.sites.filter((s) => s.identity === i.name).map((s) => s.host),
+        })),
+        rules: profiles.rules.map((r) => ({ dir: r.dir, identity: r.identity })),
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/init/apply' && method === 'POST') {
+      const body = (await readBody(req)) as { root?: string; offline?: boolean; force?: boolean } | undefined;
+      if ((await profilesExist(ctx.home)) && !body?.force) {
+        sendJson(res, 409, { error: t('web.initAlreadyExists') });
+        return;
+      }
+      const root = (body?.root ?? '').trim();
+      const found = await discover({
+        home: ctx.home,
+        ...(root !== '' ? { scanRoots: [path.resolve(ctx.home, root)] } : {}),
+        cwd: root !== '' ? path.resolve(ctx.home, root) : ctx.home,
+      });
+      const profiles = buildProfiles(found, {
+        home: ctx.home,
+        roots: root !== '' ? [path.resolve(ctx.home, root)] : [],
+        groups: ['gitee', 'github', 'gitlab', 'bitbucket', 'company', 'work'],
+      });
+      await saveProfiles(ctx.home, profiles);
+      sendJson(res, 200, profileSummary(ctx.home, profiles));
       return;
     }
 

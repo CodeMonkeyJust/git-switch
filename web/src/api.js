@@ -38,7 +38,13 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  state: (dir) => request(`/api/state${dir ? `?dir=${encodeURIComponent(dir)}` : ''}`),
+  state: (dir, lang) => {
+    const params = new URLSearchParams();
+    if (dir) params.set('dir', dir);
+    if (lang) params.set('lang', lang);
+    const query = params.toString();
+    return request(`/api/state${query ? `?${query}` : ''}`);
+  },
   plan: (profilesText) =>
     request('/api/plan', {
       method: 'POST',
@@ -71,6 +77,36 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({}),
     }),
+
+  // keys
+  keys: () => request('/api/keys'),
+  copyKey: (name) =>
+    request('/api/keys', { method: 'POST', body: JSON.stringify({ action: 'copy', name }) }),
+  generateKey: (name, comment) =>
+    request('/api/keys', { method: 'POST', body: JSON.stringify({ action: 'generate', name, comment }) }),
+  restoreKeys: (snapshot, passphrase) =>
+    request('/api/keys', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'restore', snapshot, passphrase }),
+    }),
+
+  // snapshots
+  exportSnapshot: ({ path, withKeys, passphrase }) =>
+    request('/api/snapshot/export', {
+      method: 'POST',
+      body: JSON.stringify({ path, withKeys, passphrase }),
+    }),
+  importSnapshot: ({ path, remaps, passphrase }) =>
+    request('/api/snapshot/import', {
+      method: 'POST',
+      body: JSON.stringify({ path, remaps, passphrase }),
+    }),
+
+  // setup
+  scanInit: (root, offline) =>
+    request('/api/init/scan', { method: 'POST', body: JSON.stringify({ root, offline }) }),
+  applyInit: (root, offline, force) =>
+    request('/api/init/apply', { method: 'POST', body: JSON.stringify({ root, offline, force }) }),
 };
 
 export function hasToken() {

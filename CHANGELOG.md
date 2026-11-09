@@ -46,6 +46,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The GUI now covers every CLI command.** Three new tabs close the gap:
+  - **Keys** — list keys with fingerprints and owning identities, copy a public
+    key through the server-side clipboard, generate a new key pair (confirmed
+    first), and restore keys from a snapshot. Private key material never reaches
+    the browser.
+  - **Migrate** — export a snapshot (optionally with keys, always encrypted) and
+    import one with path remapping; a failed import leaves the profile untouched.
+  - **Setup** — run `gs init` from the browser in two steps: *scan* reports what
+    would be written, *save* persists it, and an existing profile is protected.
+- A language picker in the header switches between English and Simplified Chinese
+  immediately, re-fetching the catalogue and re-rendering the current screen.
 - **Identity management in the GUI.** A new **Identities** tab lists every
   identity with its sites, adds one (name, commit name/email, SSH key, optional
   host/port/alias) and deletes one. The server validates the same rules the

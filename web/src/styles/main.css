@@ -66,6 +66,18 @@ body {
 }
 .status { margin-left: auto; color: var(--muted); font-size: 13px; }
 
+/* the language picker sits before the status text */
+.lang-picker {
+  margin-left: auto;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+.lang-picker + .status { margin-left: 12px; }
+
 main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
 h2 { font-size: 18px; margin: 0 0 16px; }

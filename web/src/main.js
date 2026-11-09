@@ -1,20 +1,28 @@
 import { api, hasToken } from './api.js';
-import { setMessages, applyStaticTranslations, t } from './i18n.js';
+import { setMessages, applyStaticTranslations, t, getLanguage } from './i18n.js';
 import { renderOverview } from './views/overview.js';
-import { renderRules } from './views/rules.js';
 import { renderIdentities } from './views/identities.js';
+import { renderRules } from './views/rules.js';
 import { renderPreview } from './views/preview.js';
 import { renderDoctor } from './views/doctor.js';
+import { renderKeys } from './views/keys.js';
+import { renderSnapshot } from './views/snapshot.js';
+import { renderInit } from './views/init.js';
 
 const VIEWS = {
   overview: renderOverview,
   identities: renderIdentities,
   rules: renderRules,
+  keys: renderKeys,
+  snapshot: renderSnapshot,
   preview: renderPreview,
   doctor: renderDoctor,
+  init: renderInit,
 };
 
-/** Re-label the tab bar in the active language. */
+const LANGUAGES = ['en', 'zh-CN'];
+
+/** Re-label the tab bar and the language picker in the active language. */
 function translateChrome() {
   applyStaticTranslations(document);
   for (const tab of document.querySelectorAll('.tab')) {
@@ -22,11 +30,25 @@ function translateChrome() {
     if (view) tab.textContent = t(`web.tab.${view}`);
   }
   document.title = t('web.title');
+  const select = document.getElementById('language');
+  if (select) {
+    select.value = getLanguage();
+    select.setAttribute('aria-label', t('web.language'));
+  }
 }
 
 const app = {
   state: undefined,
   current: 'overview',
+
+  /** Pull state (and with it the catalogue) for the active language. */
+  async refreshState(lang) {
+    const state = await api.state(undefined, lang ?? getLanguage());
+    setMessages(state.messages, state.language);
+    this.state = state;
+    translateChrome();
+    return state;
+  },
 
   async goto(view) {
     this.current = view;
@@ -74,12 +96,26 @@ async function boot() {
     tab.addEventListener('click', () => app.goto(tab.dataset.view));
   }
 
-  // Fetch the catalogue first so the first paint is already localised.
+  // language picker: switching re-fetches the catalogue and re-renders in place
+  const language = document.getElementById('language');
+  if (language) {
+    for (const code of LANGUAGES) {
+      language.append(
+        Object.assign(document.createElement('option'), { value: code, textContent: code }),
+      );
+    }
+    language.addEventListener('change', async () => {
+      try {
+        await app.refreshState(language.value);
+        await app.goto(app.current);
+      } catch (err) {
+        app.toast(err.message, 'error');
+      }
+    });
+  }
+
   try {
-    const state = await api.state();
-    setMessages(state.messages, state.language);
-    app.state = state;
-    translateChrome();
+    const state = await app.refreshState();
     document.getElementById('status').textContent = t(
       'web.counts',
       state.identities.length,

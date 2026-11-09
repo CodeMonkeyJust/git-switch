@@ -94,18 +94,32 @@ export async function initCommand(opts: InitOptions): Promise<number> {
   // A site with no IdentityFile in ~/.ssh/config may still work: ssh falls back
   // to its default key names. Probe those before claiming the site is keyless,
   // otherwise init would report a problem that does not exist.
+  let probedKeys = 0;
   if (!opts.offline) {
-    const probed = await probeMissingKeys(profiles, { home, logger });
-    if (probed > 0) {
-      logger.info('ssH keys discovered by probing');
+    probedKeys = await probeMissingKeys(profiles, { home, logger });
+    if (probedKeys > 0) {
+      logger.info('SSH keys discovered by probing');
       for (const identity of profiles.identities) {
         if (identity.sshKey) logger.dim(`   ${identity.name}  ->  ${identity.sshKey}`);
       }
     }
   }
 
+  const anyKeysOnDisk = (await availableKeys(home)).length > 0;
+
   for (const site of profiles.sites) {
-    if (!siteKey(profiles, site)) {
+    if (siteKey(profiles, site)) continue;
+
+    // Distinguish "no key exists" from "keys exist but none was accepted": the
+    // second case is usually a permission or known_hosts problem, and pointing at
+    // `doctor` is far more useful than asking for a key that already exists.
+    if (!opts.offline && anyKeysOnDisk) {
+      logger.warn(
+        `${site.host}: no key in ~/.ssh was accepted; the key may be missing, ` +
+          `or its permissions may be too open`,
+      );
+      logger.dim('   run `gs doctor --online` for the exact reason and a fix');
+    } else {
       logger.warn(
         `${site.host}: no SSH key works yet; add sshKey to the identity in profiles.yaml ` +
           `(gs doctor --online shows the details)`,

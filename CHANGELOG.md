@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `gs init` now distinguishes "no key exists" from "keys exist but none was
+  accepted". The second case is usually a permission or known-hosts problem, and
+  the message now says so and points at `gs doctor --online` instead of asking
+  for a key that is already there.
 - **`gs doctor --online` reported a false authentication failure before the
   first `gs apply`.** It probed the generated host alias, which only exists once
   the managed block has been written, so ssh answered "Could not resolve

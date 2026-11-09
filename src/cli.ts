@@ -35,6 +35,8 @@ Commands:
   key list              List SSH keys with fingerprints and the identities using them
   key gen <name>        Create a new ed25519 key pair (public key goes to the clipboard)
   key copy <name>       Copy a public key to the clipboard
+  key restore <snapshot> [--force]
+                        Write the keys embedded in a snapshot back into ~/.ssh
   snapshot export <file> [--with-keys] [--force]
                         Write a portable snapshot (encrypted when it holds keys)
   snapshot import <file> [--remap OLD=NEW] [--force]
@@ -173,6 +175,7 @@ export async function main(argv: string[]): Promise<number> {
         home,
         subcommand: args.args[0],
         target: args.args[1],
+        force: args.flags.has('force'),
         json: args.flags.has('json'),
         logger,
       });

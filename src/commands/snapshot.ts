@@ -180,8 +180,8 @@ async function importSnapshot(opts: SnapshotOptions, home: string): Promise<numb
   for (const [from, to] of remaps) logger.dim(`   remapped ${from} -> ${to}`);
 
   if (snapshot.manifest.containsKeys) {
-    logger.warn('the snapshot holds private keys, which gs does NOT write to ~/.ssh');
-    logger.dim('   restore them yourself, or create fresh keys per machine');
+    logger.warn('the snapshot holds private keys, which this command does NOT write to ~/.ssh');
+    logger.dim(`   restore them explicitly with: gs key restore ${opts.target}`);
   }
 
   logger.dim('next: gs doctor   then   gs diff   then   gs apply');

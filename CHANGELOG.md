@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `gs key restore <snapshot> [--force]` — write the keys embedded by
+  `snapshot export --with-keys` back into `~/.ssh`. Previously the export
+  embedded key material and nothing could ever read it back: `--with-keys` was a
+  one-way trip. Private keys are restored with mode `600`, existing files are
+  kept unless `--force` is given, and `snapshot import` now points at this
+  command instead of saying "restore them yourself".
 - `npm run audit:coverage` — reports exported symbols the tests never reference.
   This is what surfaced the untested `list`/`diff`/`key`/`doctor`/`snapshot`
   command layer in round 19.

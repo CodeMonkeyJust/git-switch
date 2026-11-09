@@ -1,14 +1,34 @@
 import { homedir } from 'node:os';
 import { loadProfiles } from '../core/profiles.ts';
 import { generateKey, listKeys, publicKeyFor, copyToClipboard } from '../core/keys.ts';
+import { keysFromSnapshot, restoreKeys, readSnapshotFile } from '../core/key-restore.ts';
+import { decryptSnapshot } from '../core/snapshot.ts';
 import type { Logger } from '../util/log.ts';
 
 export interface KeyOptions {
   home?: string;
   subcommand: string | undefined;
   target: string | undefined;
+  /** overwrite existing keys when restoring */
+  force?: boolean;
+  /** passphrase for an encrypted snapshot (falls back to GS_PASSPHRASE) */
+  passphrase?: string;
   json?: boolean;
   logger: Logger;
+}
+
+/** Prompt for a passphrase without echoing it into shell history. */
+async function askPassphrase(message: string): Promise<string> {
+  if (!process.stdin.isTTY) {
+    throw new Error('no passphrase available: set GS_PASSPHRASE or run interactively');
+  }
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  try {
+    return await rl.question(`${message}: `);
+  } finally {
+    rl.close();
+  }
 }
 
 export async function keyCommand(opts: KeyOptions): Promise<number> {
@@ -86,6 +106,52 @@ export async function keyCommand(opts: KeyOptions): Promise<number> {
         logger.error((err as Error).message);
         return 2;
       }
+    }
+
+    case 'restore': {
+      if (!opts.target) {
+        logger.error('usage: gs key restore <snapshot> [--force]');
+        return 2;
+      }
+      const text = await readSnapshotFile(opts.target);
+      if (text === undefined) {
+        logger.error(`cannot read ${opts.target}`);
+        return 2;
+      }
+
+      const looksEncrypted = text.trimStart().startsWith('{') && text.includes('"magic"');
+      let snapshot;
+      try {
+        if (looksEncrypted) {
+          const passphrase = opts.passphrase ?? process.env.GS_PASSPHRASE ?? (await askPassphrase('passphrase'));
+          snapshot = await decryptSnapshot(text, passphrase);
+        } else {
+          snapshot = JSON.parse(text);
+        }
+      } catch (err) {
+        logger.error((err as Error).message);
+        return 2;
+      }
+
+      const keys = keysFromSnapshot(snapshot as { files: { path: string; content: string }[] });
+      if (keys.length === 0) {
+        logger.warn('this snapshot contains no keys (export it with --with-keys)');
+        return 1;
+      }
+
+      const result = await restoreKeys({ home, keys, ...(opts.force ? { force: true } : {}) });
+      if (logger.isJson) {
+        logger.json(result);
+        return 0;
+      }
+      for (const name of result.written) logger.ok(`restored ~/.ssh/${name}`);
+      for (const name of result.skipped) {
+        logger.warn(`~/.ssh/${name} already exists; pass --force to overwrite`);
+      }
+      if (result.written.some((n) => !n.endsWith('.pub'))) {
+        logger.dim('private keys were restored with mode 600');
+      }
+      return 0;
     }
 
     default:

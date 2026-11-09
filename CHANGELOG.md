@@ -46,6 +46,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Identity management in the GUI.** A new **Identities** tab lists every
+  identity with its sites, adds one (name, commit name/email, SSH key, optional
+  host/port/alias) and deletes one. The server validates the same rules the
+  loader enforces — invalid email, bad name, duplicate name, out-of-range port —
+  and persists only when the profile is valid, so the UI can never write a file
+  that `gs apply` would refuse.
+- Deleting is guarded: an identity still referenced by rules needs an explicit
+  confirmation, and the **last** identity cannot be deleted at all (an empty
+  identities map would make every `gs` command fail to load the profile).
 - **Bilingual output (English / Simplified Chinese).** Every CLI message and every
   GUI label now comes from a catalogue. Language precedence is
   `--lang <en|zh-CN>` → `GS_LANG` → the OS locale → English. The GUI receives

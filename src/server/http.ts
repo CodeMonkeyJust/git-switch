@@ -342,6 +342,123 @@ async function handleApi(
       return;
     }
 
+    if (url.pathname === '/api/identities' && method === 'POST') {
+      const body = (await readBody(req)) as
+        | {
+            add?: boolean;
+            name?: string;
+            userName?: string;
+            email?: string;
+            sshKey?: string | null;
+            host?: string;
+            port?: number | string | null;
+            alias?: string | null;
+          }
+        | undefined;
+      const remove = url.searchParams.get('remove');
+
+      const profiles = await loadProfiles(ctx.home);
+
+      if (remove) {
+        const inUse = profiles.rules.filter((r) => r.identity === remove).length;
+        const isLast = profiles.identities.length <= 1;
+
+        // A profile with no identity is invalid, so the last one is protected:
+        // deleting it would leave every `gs` command unable to load the file.
+        if (isLast) {
+          sendJson(res, 409, {
+            error: t('web.lastIdentity'),
+            lastIdentity: true,
+          });
+          return;
+        }
+
+        if (inUse > 0) {
+          // deleting would leave dangling rules; make the user acknowledge it
+          const force = url.searchParams.get('force') === '1';
+          if (!force) {
+            sendJson(res, 409, {
+              error: t('web.identityInUse', remove, inUse),
+              rules: inUse,
+            });
+            return;
+          }
+          profiles.rules = profiles.rules.filter((r) => r.identity !== remove);
+        }
+        profiles.repositories = profiles.repositories.filter((r) => r.identity !== remove);
+        profiles.identities = profiles.identities.filter((i) => i.name !== remove);
+        profiles.sites = profiles.sites.filter((s) => s.identity !== remove);
+        await saveProfiles(ctx.home, profiles);
+        sendJson(res, 200, profileSummary(ctx.home, profiles));
+        return;
+      }
+
+      if (body?.add) {
+        const name = (body.name ?? '').trim();
+        const userName = (body.userName ?? '').trim();
+        const email = (body.email ?? '').trim();
+
+        const problems: string[] = [];
+        if (name === '') problems.push(`${t('web.identityName')}: ${t('web.required')}`);
+        if (userName === '') problems.push(`${t('web.userName')}: ${t('web.required')}`);
+        if (email === '') problems.push(`${t('web.userEmail')}: ${t('web.required')}`);
+        if (name !== '' && !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) {
+          problems.push(`${t('web.identityName')}: ${t('web.invalidName')}`);
+        }
+        if (email !== '' && !/^[^\s@]+@[^\s@]+$/.test(email)) {
+          problems.push(`${t('web.userEmail')}: ${t('web.invalidEmail')}`);
+        }
+        if (profiles.identities.some((i) => i.name === name)) {
+          problems.push(t('web.duplicateIdentity', name));
+        }
+        if (problems.length > 0) {
+          sendJson(res, 400, { error: t('web.invalidIdentity', problems.join('; ')), problems });
+          return;
+        }
+
+        const keyRaw = (body.sshKey ?? '').trim();
+        const identity: (typeof profiles.identities)[number] = {
+          name,
+          user: { name: userName, email },
+        };
+        if (keyRaw !== '') identity.sshKey = keyRaw;
+        profiles.identities.push(identity);
+
+        const host = (body.host ?? '').trim();
+        if (host !== '') {
+          const portRaw = body.port;
+          const port =
+            portRaw === null || portRaw === undefined || String(portRaw).trim() === ''
+              ? undefined
+              : Number.parseInt(String(portRaw), 10);
+          if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) {
+            profiles.identities = profiles.identities.filter((i) => i.name !== name);
+            sendJson(res, 400, { error: t('web.invalidIdentity', `${t('web.sitePort')}: 1-65535`) });
+            return;
+          }
+          const site: (typeof profiles.sites)[number] = { host, identity: name };
+          if (port !== undefined) site.port = port;
+          const alias = (body.alias ?? '').trim();
+          if (alias !== '') site.alias = alias;
+          profiles.sites.push(site);
+        }
+
+        // validate through the real schema before persisting: the GUI must not be
+        // able to write a profile that `gs apply` would later reject
+        try {
+          await saveProfiles(ctx.home, profiles);
+        } catch (err) {
+          sendJson(res, 400, { error: (err as Error).message });
+          return;
+        }
+        sendJson(res, 200, profileSummary(ctx.home, profiles));
+        return;
+      }
+
+      sendJson(res, 400, { error: 'expected {add:…} or ?remove=<name>' });
+      return;
+    }
+
     sendJson(res, 404, { error: 'unknown endpoint' });
   } catch (err) {
     sendJson(res, 400, { error: (err as Error).message });

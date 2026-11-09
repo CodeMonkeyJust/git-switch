@@ -61,6 +61,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ remove: dir }),
     }),
+  addIdentity: (fields) =>
+    request('/api/identities', {
+      method: 'POST',
+      body: JSON.stringify({ add: true, ...fields }),
+    }),
+  removeIdentity: (name, force = false) =>
+    request(`/api/identities?remove=${encodeURIComponent(name)}${force ? '&force=1' : ''}`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
 };
 
 export function hasToken() {

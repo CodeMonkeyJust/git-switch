@@ -2,11 +2,13 @@ import { api, hasToken } from './api.js';
 import { setMessages, applyStaticTranslations, t } from './i18n.js';
 import { renderOverview } from './views/overview.js';
 import { renderRules } from './views/rules.js';
+import { renderIdentities } from './views/identities.js';
 import { renderPreview } from './views/preview.js';
 import { renderDoctor } from './views/doctor.js';
 
 const VIEWS = {
   overview: renderOverview,
+  identities: renderIdentities,
   rules: renderRules,
   preview: renderPreview,
   doctor: renderDoctor,

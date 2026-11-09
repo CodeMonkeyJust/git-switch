@@ -17,8 +17,8 @@
   },
   "scripts": {
     "gs": "node --experimental-strip-types src/cli.ts",
-    "test": "node scripts/run-tests.mjs \"test/unit/*.test.ts\" \"test/e2e/*.test.ts\"",
-    "test:unit": "node scripts/run-tests.mjs \"test/unit/*.test.ts\"",
+    "test": "node scripts/run-tests.mjs \"test/unit/*.test.ts\" \"test/unit/*.test.mjs\" \"test/e2e/*.test.ts\"",
+    "test:unit": "node scripts/run-tests.mjs \"test/unit/*.test.ts\" \"test/unit/*.test.mjs\"",
     "test:e2e": "node scripts/run-tests.mjs \"test/e2e/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

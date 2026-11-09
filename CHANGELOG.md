@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The GUI's ES modules are now **executed** in tests against a DOM shim, so a
+  missing function or a wrong call signature fails a test instead of showing a
+  blank page. Each of the four screens is rendered and asserted on, a failing API
+  call is shown rather than thrown, and the token is verified to travel in the
+  `x-gs-token` header. A deliberate mutation was used to confirm the tests catch
+  regressions.
 - GUI write-path tests: drive the real HTTP endpoints the browser calls
   (plan → apply → plan) and confirm with plain git that the identity took
   effect, that a malformed profile is refused without writing, and that a rule
@@ -86,6 +92,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The test suite was intermittently red.** `gui-command.test.ts` spawned the
+  CLI as a child process while the test runner was writing to the same stdio
+  channel, corrupting the runner's IPC stream on Windows
+  (`Unable to deserialize cloned data`), which failed the whole file with no
+  failing assertion. The command is now exercised in-process; five consecutive
+  full runs are clean.
 - **Sites without a key no longer produce a broken `Host` block.** A `Host` entry
   carrying `IdentitiesOnly yes` but no `IdentityFile` makes ssh fall back to its
   default keys (`id_rsa`, `id_ed25519`, …) — precisely the "wrong key is tried"

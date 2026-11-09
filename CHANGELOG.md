@@ -50,6 +50,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `-----BEGIN … PRIVATE KEY-----` value was caught, so pasting a token into a
   comment field stored it in a file meant to be shared.
 
+### Changed
+
+- **Forms on the identity and rule screens follow the order a user thinks in,
+  and every control has a visible label.** Identity: *Basic identity* → *SSH
+  key* → *Site*; a rule: *Target directory* → *Assign to an identity*. Labels
+  stay visible while typing (placeholders alone disappear), required fields carry
+  a `*`, and hints sit beside the label instead of inside the input.
+- The SSH key is now a `<select>` of keys that actually exist in `~/.ssh` (plus a
+  "no key" option) instead of free text, and the identity for a rule is a
+  dropdown that starts on a placeholder rather than silently defaulting to the
+  first entry.
+- The directory browser fills the field and offers an explicit "Use this
+  directory" button, instead of requiring the user to retype the path.
+- A rules-screen section was reusing the identity screen's “Basic identity”
+  wording; it now says “Assign to an identity”.
+
 ### Added
 
 - **Identities can be edited in the GUI**, not just added and deleted. Every

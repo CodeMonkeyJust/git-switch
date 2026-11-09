@@ -39,7 +39,3 @@ export async function saveProfiles(home: string, profiles: Profiles): Promise<vo
 export async function profilesExist(home: string): Promise<boolean> {
   return exists(gsPaths(home).profiles);
 }
-
-export async function readProfilesRaw(home: string): Promise<string | undefined> {
-  return readFileIfExists(gsPaths(home).profiles);
-}

@@ -27,6 +27,7 @@
     "build": "node scripts/build.mjs",
     "prepare": "node scripts/build.mjs",
     "verify:dist": "node scripts/verify-dist.mjs",
+    "audit:coverage": "node scripts/coverage-audit.mjs",
     "smoke:gui": "node scripts/smoke-gui.mjs"
   },
   "devDependencies": {

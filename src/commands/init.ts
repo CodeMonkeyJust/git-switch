@@ -391,24 +391,4 @@ function pickAlias(canonical: string, existingAliases: string[], occupied: Set<s
   return `${base}-gs${n}`;
 }
 
-/** Used by tests and by `init --json`: the serialised profile text. */
-export function renderProfileText(profiles: Profiles): string {
-  return stringify(toYaml(profiles));
-}
-
-export async function listSshKeys(home: string): Promise<string[]> {
-  const dir = path.join(home, '.ssh');
-  if (!(await exists(dir))) return [];
-  const entries = await readdir(dir).catch(() => []);
-  const keys: string[] = [];
-  for (const entry of entries) {
-    if (!entry.endsWith('.pub')) continue;
-    const name = entry.replace(/\.pub$/, '');
-    const priv = await readFile(path.join(dir, name), 'utf8').catch(() => undefined);
-    if (priv === undefined) continue;
-    keys.push(name);
-  }
-  return keys.sort();
-}
-
 export { normaliseRulePath, writeFileAtomic };

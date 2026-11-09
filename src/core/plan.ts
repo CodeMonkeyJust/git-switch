@@ -212,15 +212,4 @@ function safeBlock(text: string) {
   }
 }
 
-/** Block hash of the generated content, used to detect hand edits. */
-export function plannedBlockHash(op: FileOp): string | undefined {
-  if (!op.after) return undefined;
-  try {
-    const block = findBlock(op.after);
-    return block.present ? contentHash(block.content) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 export { detectEol, toPlatform };

@@ -101,13 +101,51 @@ export const DEFAULT_SETTINGS: Settings = {
 /* Secret guard                                                        */
 /* ------------------------------------------------------------------ */
 
-const FORBIDDEN_KEY = /^(password|passphrase|token|secret|apikey|api_key|privatekey|private_key|credential|credentials)$/i;
-const FORBIDDEN_VALUE = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/;
+/**
+ * Key names that would hold a secret. Matched case-insensitively, allowing
+ * prefixes and camelCase (`api_secret`, `github_token`, `myPassword`).
+ */
+const SECRET_WORDS = 'password|passwd|passphrase|token|secret|apikey|api_key|privatekey|private_key|accesskey|access_key|credential|credentials';
+const FORBIDDEN_KEY = new RegExp(
+  `(^|_|-)(\\w*?)(${SECRET_WORDS})($|_|-)|^(${SECRET_WORDS})$|(${SECRET_WORDS})$`,
+  'i',
+);
+
+/** camelCase form: `myPassword`, `apiToken`, `clientSecret`. */
+const FORBIDDEN_CAMEL_KEY = new RegExp(
+  `^([a-z]+)([A-Z])(${SECRET_WORDS.split('|').map((w) => w.replace(/_/g, '')).join('|')})$`,
+  'i',
+);
+
+/**
+ * Values that are recognisably credentials, even when the key name is innocent.
+ * A profile is meant to hold names and paths, never key material or bearer
+ * tokens, so anything matching here is refused outright.
+ */
+const FORBIDDEN_VALUE_PATTERNS: { re: RegExp; what: string }[] = [
+  { re: /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/, what: 'private key material' },
+  { re: /-----BEGIN PGP PRIVATE KEY BLOCK-----/, what: 'PGP private key material' },
+  // bearer/JWT style authorisation values
+  { re: /\bBearer\s+[A-Za-z0-9._~+/-]{10,}=*/i, what: 'a bearer token' },
+  { re: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./, what: 'a JWT' },
+  // well-known access key prefixes
+  { re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/, what: 'an AWS access key id' },
+  { re: /\bgh[pousr]_[A-Za-z0-9]{20,}/, what: 'a GitHub token' },
+  { re: /\bglpat-[A-Za-z0-9_-]{20,}/, what: 'a GitLab token' },
+  { re: /\bxox[baprs]-[A-Za-z0-9-]{10,}/, what: 'a Slack token' },
+  { re: /\bsk-[A-Za-z0-9]{20,}/, what: 'an API secret key' },
+];
 
 export function assertNoSecrets(value: YamlValue, path = '$'): void {
   if (typeof value === 'string') {
-    if (FORBIDDEN_VALUE.test(value)) {
-      throw new ModelError('private key material must never be stored in profiles.yaml', path);
+    for (const { re, what } of FORBIDDEN_VALUE_PATTERNS) {
+      if (re.test(value)) {
+        throw new ModelError(
+          `${path} looks like ${what}: profiles.yaml must never contain secrets ` +
+            `(use your OS credential manager or ssh-agent)`,
+          path,
+        );
+      }
     }
     return;
   }
@@ -117,7 +155,7 @@ export function assertNoSecrets(value: YamlValue, path = '$'): void {
   }
   if (value !== null && typeof value === 'object') {
     for (const [k, v] of Object.entries(value)) {
-      if (FORBIDDEN_KEY.test(k)) {
+      if (FORBIDDEN_KEY.test(k) || FORBIDDEN_CAMEL_KEY.test(k)) {
         throw new ModelError(
           `key "${k}" is not allowed: profiles.yaml must not contain secrets ` +
             `(use your OS credential manager or ssh-agent)`,

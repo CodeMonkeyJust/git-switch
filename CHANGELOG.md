@@ -7,8 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **The secret guard now catches credentials that previously slipped through.**
+  `api_secret`, `github_token`, camelCase names like `myPassword`/`apiToken`, and
+  values that are recognisably credentials — PGP private keys, `Bearer` tokens,
+  JWTs, AWS access key ids, GitHub/GitLab/Slack tokens, `sk-` keys — are all
+  refused. Previously only an exact `password`/`token`/`secret` key or an
+  `-----BEGIN … PRIVATE KEY-----` value was caught, so pasting a token into a
+  comment field stored it in a file meant to be shared.
+
 ### Added
 
+- `npm run audit:coverage` — reports exported symbols the tests never reference.
+  This is what surfaced the untested `list`/`diff`/`key`/`doctor`/`snapshot`
+  command layer in round 19.
+- Tests for `gs doctor`, `gs key` and `gs snapshot` (exit codes, `--json`
+  output, overwrite refusal, round-tripped profiles) and for the secret guard
+  (33 cases covering what must be blocked and what must still be allowed).
 - Tests for `gs list`, `gs diff` and the diff renderer, which had none: the cwd
   resolution, the "no matching rule" warning, `--json` output for both commands,
   that `diff` never writes, and that apply-then-list agree.
@@ -92,6 +108,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Concurrent-edit detection: refuses to overwrite files changed after planning.
 - Warning when manual `includeIf` entries or conflicting `Host` entries exist
   outside the managed block.
+
+### Changed
+
+- Removed unreachable exports (`plannedBlockHash`, `readProfilesRaw`,
+  `listSshKeys`, `renderProfileText`) that no caller used, found by the new
+  coverage audit.
 
 ### Fixed
 

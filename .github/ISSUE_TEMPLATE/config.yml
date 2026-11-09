@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or usage help
+    url: https://github.com/CodeMonkeyJust/git-switch/discussions
+    about: Ask questions and share setups here.
+  - name: Security vulnerability
+    url: https://github.com/CodeMonkeyJust/git-switch/security/advisories/new
+    about: Please report security issues privately, not as a public issue.

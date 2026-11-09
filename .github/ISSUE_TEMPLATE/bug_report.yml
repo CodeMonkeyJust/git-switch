@@ -1,0 +1,54 @@
+name: Bug report
+description: Report something that does not work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste private keys or access tokens.** Redact home directories
+        and email addresses if you prefer.
+  - type: input
+    id: version
+    attributes:
+      label: gs version
+      description: Output of `gs version`
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS and Node version
+      description: e.g. Windows 11, Node v24.18.0, git 2.52.0
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output of `gs list` and `gs diff`
+      render: text
+    validations:
+      required: false
+  - type: dropdown
+    id: repo
+    attributes:
+      label: Does the affected directory contain a Git repository?
+      description: |
+        `includeIf "gitdir:..."` only applies while git resolves a repository.
+      options:
+        - 'Yes'
+        - 'No'
+        - "I'm not sure"
+    validations:
+      required: true

@@ -1,0 +1,56 @@
+{
+  "name": "git-switch",
+  "version": "0.1.0",
+  "description": "Multi-identity Git & SSH config manager: map directories to identities, generate includeIf rules and managed SSH config blocks, diagnose auth issues, and migrate everything to a new computer.",
+  "type": "module",
+  "bin": {
+    "gs": "dist/gs.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "gs": "node --experimental-strip-types src/cli.ts",
+    "test": "node scripts/run-tests.mjs \"test/unit/*.test.ts\" \"test/e2e/*.test.ts\"",
+    "test:unit": "node scripts/run-tests.mjs \"test/unit/*.test.ts\"",
+    "test:e2e": "node scripts/run-tests.mjs \"test/e2e/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "node scripts/build.mjs",
+    "prepare": "node scripts/build.mjs",
+    "verify:dist": "node scripts/verify-dist.mjs",
+    "smoke:gui": "node scripts/smoke-gui.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "git",
+    "ssh",
+    "gitconfig",
+    "multi-account",
+    "identity-management",
+    "devtools",
+    "cli",
+    "vue",
+    "typescript"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodeMonkeyJust/git-switch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CodeMonkeyJust/git-switch/issues"
+  },
+  "homepage": "https://github.com/CodeMonkeyJust/git-switch#readme"
+}

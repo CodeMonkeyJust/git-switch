@@ -1,0 +1,15 @@
+schemaVersion: 1
+identities:
+  personal:
+    user:
+      name: zlj20
+      email: zlj20@163.com
+    sshKey: id_ed25519_github
+    sites:
+      - host: github.com
+        alias: gh
+rules:
+  - dir: ~/code/personal
+    identity: personal
+settings:
+  backupKeep: 20

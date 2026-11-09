@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Show toolchain
+        run: |
+          node --version
+          git --version
+          ssh -V 2>&1 || true
+
+      - name: Run tests
+        run: npm test
+
+      - name: GUI smoke test
+        run: npm run smoke:gui
+
+      - name: Build and verify the published artefact
+        run: |
+          npm run build
+          test -f dist/gs.mjs
+          test -f dist/cli.js
+          test -f dist/web/index.html
+          test "$(find dist -name '*.ts' | wc -l)" -eq 0
+          node dist/gs.mjs version
+
+  verify:
+    name: release gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Ensure no runtime dependencies
+        run: node scripts/verify-dist.mjs
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build and verify the published artefact
+        run: |
+          npm run build
+          test -f dist/gs.mjs
+          test -f dist/cli.js
+          test -f dist/web/index.html
+          test "$(find dist -name '*.ts' | wc -l)" -eq 0
+          node dist/gs.mjs version
+
+      - name: CLI responds
+        run: |
+          node src/cli.ts version
+          node src/cli.ts help
+
+      - name: Every command rejects a missing profile cleanly
+        run: |
+          set +e
+          HOME="$(mktemp -d)" node src/cli.ts list > /dev/null 2>&1
+          code=$?
+          test "$code" -eq 2 || { echo "expected exit 2, got $code"; exit 1; }

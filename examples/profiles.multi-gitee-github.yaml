@@ -1,0 +1,26 @@
+# Personal GitHub + personal Gitee on the same machine.
+schemaVersion: 1
+identities:
+  github:
+    user:
+      name: zlj20
+      email: zlj20@163.com
+    sshKey: id_ed25519_github
+    sites:
+      - host: github.com
+        alias: gh
+  gitee:
+    user:
+      name: zlj20
+      email: zlj20@163.com
+    sshKey: id_ed25519_gitee
+    sites:
+      - host: gitee.com
+        alias: gitee
+rules:
+  - dir: ~/code/github
+    identity: github
+  - dir: ~/code/gitee
+    identity: gitee
+settings:
+  backupKeep: 20

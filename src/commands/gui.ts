@@ -1,0 +1,137 @@
+import { execFile } from 'node:child_process';
+import { readFile, writeFile, unlink } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import path from 'node:path';
+import { startServer, type RunningServer } from '../server/http.ts';
+import { loadProfiles } from '../core/profiles.ts';
+import { gsPaths } from '../core/paths.ts';
+import { exists } from '../util/fs-atomic.ts';
+import type { Logger } from '../util/log.ts';
+
+export interface GuiOptions {
+  home?: string;
+  port?: number;
+  open?: boolean;
+  /** minutes of inactivity before exiting; 0 disables */
+  idleTimeoutMinutes?: number;
+  json?: boolean;
+  logger: Logger;
+}
+
+interface LockFile {
+  pid: number;
+  port: number;
+  startedAt: string;
+}
+
+function lockPath(home: string): string {
+  return path.join(gsPaths(home).configDir, 'gui.lock');
+}
+
+async function readLock(home: string): Promise<LockFile | undefined> {
+  const file = lockPath(home);
+  if (!(await exists(file))) return undefined;
+  try {
+    return JSON.parse(await readFile(file, 'utf8')) as LockFile;
+  } catch {
+    return undefined;
+  }
+}
+
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function openBrowser(url: string): void {
+  const platform = process.platform;
+  const command = platform === 'win32' ? 'cmd' : platform === 'darwin' ? 'open' : 'xdg-open';
+  const args = platform === 'win32' ? ['/c', 'start', '', url] : [url];
+  execFile(command, args, { windowsHide: true }, () => {
+    /* opening a browser is best effort */
+  });
+}
+
+export async function guiCommand(opts: GuiOptions): Promise<number> {
+  const home = opts.home ?? homedir();
+  const { logger } = opts;
+
+  // a profile is required: the GUI edits one, it does not invent one
+  try {
+    await loadProfiles(home);
+  } catch (err) {
+    logger.error((err as Error).message);
+    return 2;
+  }
+
+  // single instance: reuse a live server instead of starting a second one
+  const existing = await readLock(home);
+  if (existing && processAlive(existing.pid) && existing.pid !== process.pid) {
+    const url = `http://127.0.0.1:${existing.port}/`;
+    logger.warn(`gs gui is already running on port ${existing.port}`);
+    logger.dim(`open ${url} in your browser (restart that instance to get a fresh token)`);
+    if (opts.open !== false) openBrowser(url);
+    return 0;
+  }
+
+  let lastActivity = Date.now();
+  const server: RunningServer = await startServer({
+    home,
+    ...(opts.port !== undefined ? { port: opts.port } : {}),
+    onActivity: () => {
+      lastActivity = Date.now();
+    },
+  });
+
+  await writeFile(
+    lockPath(home),
+    JSON.stringify({ pid: process.pid, port: server.port, startedAt: new Date().toISOString() }, null, 2),
+    'utf8',
+  );
+
+  const cleanup = async () => {
+    await server.close();
+    await unlink(lockPath(home)).catch(() => {});
+  };
+
+  if (opts.json) {
+    logger.json({ url: server.url, port: server.port, pid: process.pid });
+  } else {
+    logger.ok(`GUI listening on http://127.0.0.1:${server.port}/`);
+    logger.dim('the token is embedded in the URL fragment; open the printed link');
+    if (opts.open !== false) {
+      logger.dim('opening your browser…');
+      logger.dim(`  ${server.url}`);
+    }
+  }
+
+  if (opts.open !== false && !opts.json) openBrowser(server.url);
+
+  const idleMinutes = opts.idleTimeoutMinutes ?? 30;
+  if (idleMinutes > 0) {
+    const timer = setInterval(() => {
+      if (Date.now() - lastActivity > idleMinutes * 60_000) {
+        logger.info(`no activity for ${idleMinutes} minutes, shutting down`);
+        void cleanup().then(() => process.exit(0));
+      }
+    }, 30_000);
+    timer.unref?.();
+  }
+
+  const shutdown = async () => {
+    await cleanup();
+    process.exit(0);
+  };
+  process.once('SIGINT', () => void shutdown());
+  process.once('SIGTERM', () => void shutdown());
+
+  // keep the process alive until a signal arrives
+  await new Promise<void>(() => {});
+  return 0;
+}
+
+export { openBrowser };

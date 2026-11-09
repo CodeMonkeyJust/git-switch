@@ -1,0 +1,33 @@
+# Corporate Gitea (non-standard port) alongside a personal GitHub account.
+schemaVersion: 1
+identities:
+  work:
+    user:
+      name: zhulj
+      email: zhulj@pde.com.cn
+    sshKey: id_ed25519
+    sites:
+      - host: git.pdesoft.cn
+        port: 9092
+        alias: pde
+  personal:
+    user:
+      name: zlj20
+      email: zlj20@163.com
+    sshKey: id_ed25519_github
+    sites:
+      - host: github.com
+        alias: gh
+rules:
+  - dir: D:/CODE/PDE-GIT
+    identity: work
+    comment: corporate repositories
+  - dir: D:/CODE/github
+    identity: personal
+  - dir: D:/CODE/MyGithub
+    identity: personal
+repositories:
+  - path: D:/CODE/MyGithub/legacy-corporate-tool
+    identity: work
+settings:
+  backupKeep: 20

@@ -48,12 +48,82 @@ function renderProfileError(state) {
   });
   slot.append(hint);
 
-  const reload = Object.assign(document.createElement('button'), {
-    textContent: t('web.reload'),
+  const actions = Object.assign(document.createElement('div'), { className: 'form-actions' });
+
+  // The common failure is a URL pasted into a host field; offer to fix it
+  // rather than telling the user to edit YAML they came here to avoid.
+  const fix = Object.assign(document.createElement('button'), {
+    textContent: t('web.tryFix'),
     className: 'primary',
   });
+  fix.addEventListener('click', async () => {
+    fix.disabled = true;
+    try {
+      const preview = await api.repair(false);
+      if (preview.ok) {
+        window.location.reload();
+        return;
+      }
+      if (!preview.suggestion || preview.suggestion.fixable !== true) {
+        slot.append(
+          Object.assign(document.createElement('div'), {
+            className: 'notice warn',
+            textContent: t('web.cannotFix'),
+          }),
+        );
+        return;
+      }
+
+      const before = preview.suggestion.problem;
+      const after = preview.suggestion.fixed;
+      if (!confirm(t('web.confirmFix', before, after))) {
+        fix.disabled = false;
+        return;
+      }
+
+      const done = await api.repair(true);
+      if (done.ok) {
+        window.location.reload();
+      } else {
+        slot.append(
+          Object.assign(document.createElement('div'), {
+            className: 'notice error',
+            textContent: done.error ?? t('web.cannotFix'),
+          }),
+        );
+      }
+    } catch (err) {
+      slot.append(
+        Object.assign(document.createElement('div'), {
+          className: 'notice error',
+          textContent: err.message,
+        }),
+      );
+    }
+  });
+  actions.append(fix);
+
+  const reload = Object.assign(document.createElement('button'), {
+    textContent: t('web.reload'),
+  });
   reload.addEventListener('click', () => window.location.reload());
-  slot.append(reload);
+  actions.append(reload);
+
+  // a copyable path is faster than describing where the file lives
+  const reveal = Object.assign(document.createElement('button'), {
+    textContent: t('web.showFile'),
+  });
+  reveal.addEventListener('click', () => {
+    slot.append(
+      Object.assign(document.createElement('div'), {
+        className: 'notice ok',
+        textContent: state.profilePath ?? '~/.config/gs/profiles.yaml',
+      }),
+    );
+  });
+  actions.append(reveal);
+
+  slot.append(actions);
 }
 
 /** Re-label the tab bar and the language picker in the active language. */

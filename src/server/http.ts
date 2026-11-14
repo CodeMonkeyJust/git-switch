@@ -32,6 +32,7 @@ import {
   remapProfiles,
   assertNoPlaintextKeys,
 } from '../core/snapshot.ts';
+import { suggestRepair, applyRepair } from '../core/repair.ts';
 import { discover } from '../core/discover.ts';
 import { buildProfiles } from '../commands/init.ts';
 
@@ -897,6 +898,61 @@ async function handleApi(
       });
       await saveProfiles(ctx.home, profiles);
       sendJson(res, 200, profileSummary(ctx.home, profiles));
+      return;
+    }
+
+    /* ---------------- repair ---------------- */
+
+    if (url.pathname === '/api/repair' && method === 'POST') {
+      const body = (await readBody(req)) as { apply?: boolean } | undefined;
+      const profilesFile = gsPaths(ctx.home).profiles;
+
+      const text = await readFile(profilesFile, 'utf8').catch(() => undefined);
+      if (text === undefined) {
+        sendJson(res, 400, { error: t('snapshot.cannotRead', profilesFile) });
+        return;
+      }
+
+      // reproduce the failure the page reported
+      let message: string | undefined;
+      try {
+        parseProfilesText(text, profilesFile);
+      } catch (err) {
+        message = (err as Error).message;
+      }
+      if (message === undefined) {
+        sendJson(res, 200, { ok: true, alreadyValid: true });
+        return;
+      }
+
+      const suggestion = suggestRepair(message);
+      if (!suggestion) {
+        sendJson(res, 200, { ok: false, error: message, fixable: false });
+        return;
+      }
+      if (!suggestion.fixable) {
+        sendJson(res, 200, { ok: false, error: message, suggestion });
+        return;
+      }
+
+      if (body?.apply !== true) {
+        sendJson(res, 200, { ok: false, error: message, suggestion, dryRun: true });
+        return;
+      }
+
+      const repaired = applyRepair(text, suggestion);
+      // never write a "fix" that still cannot be loaded
+      try {
+        parseProfilesText(repaired, profilesFile);
+      } catch (err) {
+        sendJson(res, 400, { error: (err as Error).message, suggestion });
+        return;
+      }
+
+      // keep the original next to the file so the change is reversible
+      await writeFileAtomic(`${profilesFile}.before-repair`, text);
+      await writeFileAtomic(profilesFile, repaired);
+      sendJson(res, 200, { ok: true, suggestion, backup: `${profilesFile}.before-repair` });
       return;
     }
 

@@ -124,6 +124,9 @@ export const api = {
     request('/api/init/scan', { method: 'POST', body: JSON.stringify({ root, offline }) }),
   applyInit: (root, offline, force) =>
     request('/api/init/apply', { method: 'POST', body: JSON.stringify({ root, offline, force }) }),
+
+  // repair a profile that failed validation
+  repair: (apply) => request('/api/repair', { method: 'POST', body: JSON.stringify({ apply }) }),
 };
 
 export function hasToken() {

@@ -94,6 +94,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **An invalid profile can be repaired from the GUI.** Showing the error was not
+  enough — the user opened a GUI to avoid editing YAML. The error banner now
+  offers *Fix it for me*: the common mistakes (a URL pasted into `host`, a
+  `host:port` pair, `git@host:owner/repo`) are split into `host` and `port`,
+  previewed, and written only after confirmation. The original is kept as
+  `profiles.yaml.before-repair`, and a repair that would still not parse is
+  rejected instead of saved.
 - **Renaming an SSH key.** The Keys screen can rename a key pair on disk; the
   `.pub` companion follows, and every identity or site that referenced the old
   name is rewritten so the profile keeps loading. An existing target, an invalid

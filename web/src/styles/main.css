@@ -95,6 +95,16 @@ body {
   font-size: 12px;
 }
 
+/* a broken profile is shown above every screen instead of blanking them */
+.profile-error:empty { display: none; }
+.profile-error { margin-bottom: 8px; }
+.profile-error .notice {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
 h2 { font-size: 18px; margin: 0 0 16px; }

@@ -4,7 +4,7 @@ import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { startServer, type RunningServer } from '../server/http.ts';
-import { loadProfiles } from '../core/profiles.ts';
+import { loadProfiles, profilesExist } from '../core/profiles.ts';
 import { gsPaths } from '../core/paths.ts';
 import { exists } from '../util/fs-atomic.ts';
 import type { Logger } from '../util/log.ts';
@@ -61,12 +61,20 @@ export async function guiCommand(opts: GuiOptions): Promise<number> {
   const home = opts.home ?? homedir();
   const { logger } = opts;
 
-  // a profile is required: the GUI edits one, it does not invent one
+  // A missing profile is a setup problem: the GUI edits a profile, it does not
+  // invent one. Point the user at `gs init` and stop.
+  if (!(await profilesExist(home))) {
+    logger.error(`${gsPaths(home).profiles} does not exist — run \`gs init\` first`);
+    return 2;
+  }
+
+  // A *broken* profile is different: the GUI is where the user can see what is
+  // wrong, so it starts anyway and the page reports the error.
   try {
     await loadProfiles(home);
   } catch (err) {
-    logger.error((err as Error).message);
-    return 2;
+    logger.warn(`the profile could not be loaded: ${(err as Error).message}`);
+    logger.dim('the GUI will start so you can inspect the problem');
   }
 
   // single instance: reuse a live server instead of starting a second one

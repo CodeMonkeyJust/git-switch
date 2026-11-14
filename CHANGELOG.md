@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **One invalid field no longer blanks the whole GUI.** A site host pasted as a
+  URL (`http://host:9090/`) made `loadProfiles` throw, `/api/state` answered 400,
+  and every screen rendered empty with no explanation — and `gs gui` refused to
+  start at all. Now:
+  - `/api/state` degrades: it returns `200` with empty lists plus `profileError`
+    carrying the exact field and message, so every tab still renders;
+  - the page shows that error in a banner above all screens, with a reload button;
+  - `gs gui` starts on a broken profile (it still refuses when the profile is
+    missing entirely, which is a `gs init` situation).
 - **`gs gui --home` looks exactly like the real GUI, so a user could configure an
   identity in a sandbox and be confused when their real `~/.ssh` never changed.**
   The command now prints the home it operates on and warns explicitly when it is

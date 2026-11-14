@@ -22,6 +22,40 @@ const VIEWS = {
 
 const LANGUAGES = ['en', 'zh-CN'];
 
+/**
+ * Show a broken profile as a banner above every screen.
+ *
+ * One invalid field (say a site host pasted as a URL) used to make /api/state
+ * fail, which left every tab blank with no explanation. The API now degrades to
+ * empty data plus `profileError`, and this banner is what the user sees.
+ */
+function renderProfileError(state) {
+  const slot = document.getElementById('profile-error');
+  if (!slot) return;
+  slot.replaceChildren();
+  if (!state?.profileError) return;
+
+  slot.append(
+    Object.assign(document.createElement('div'), {
+      className: 'notice error',
+      textContent: t('web.profileError', state.profileError),
+    }),
+  );
+
+  const hint = Object.assign(document.createElement('div'), {
+    className: 'notice warn',
+    textContent: t('web.profileErrorHint', state.profilePath ?? '~/.config/gs/profiles.yaml'),
+  });
+  slot.append(hint);
+
+  const reload = Object.assign(document.createElement('button'), {
+    textContent: t('web.reload'),
+    className: 'primary',
+  });
+  reload.addEventListener('click', () => window.location.reload());
+  slot.append(reload);
+}
+
 /** Re-label the tab bar and the language picker in the active language. */
 function translateChrome() {
   applyStaticTranslations(document);
@@ -36,6 +70,7 @@ function translateChrome() {
     select.setAttribute('aria-label', t('web.language'));
   }
   renderHomeBanner(app.state);
+  renderProfileError(app.state);
 }
 
 /**
@@ -88,8 +123,10 @@ const app = {
     const main = document.getElementById('main');
     // the banner lives outside the view container so switching tabs keeps it
     const banner = document.getElementById('home-banner');
+    const errorSlot = document.getElementById('profile-error');
     main.replaceChildren();
     if (banner) main.append(banner);
+    if (errorSlot) main.append(errorSlot);
     const host = Object.assign(document.createElement('div'), { className: 'view' });
     main.append(host);
     try {

@@ -319,6 +319,10 @@ const en: Catalogue = {
   'web.sandboxBanner':
     'SANDBOX: operating on {0}. Changes here do NOT touch your real ~/.ssh or ~/.gitconfig.',
   'web.realHomeBanner': 'Operating on your real home: {0}',
+  'web.profileError': 'The profile could not be loaded: {0}',
+  'web.profileErrorHint':
+    'Fix {0} and reload. The screens below show no data until the profile is valid.',
+  'web.reload': 'Reload',
   'web.dismiss': 'Dismiss',
   'web.identitiesTitle': 'Identities',
   'web.addIdentity': 'Add identity',
@@ -681,6 +685,9 @@ const zhCN: Catalogue = {
   'web.sandboxBanner':
     '沙箱：当前操作的是 {0}。此处的改动不会影响你真实的 ~/.ssh 和 ~/.gitconfig。',
   'web.realHomeBanner': '正在操作你的真实 home：{0}',
+  'web.profileError': '配置文件加载失败：{0}',
+  'web.profileErrorHint': '请修正 {0} 后刷新页面。在配置合法之前，下方页面不会显示数据。',
+  'web.reload': '刷新',
   'web.dismiss': '知道了',
   'web.identitiesTitle': '身份',
   'web.addIdentity': '新增身份',

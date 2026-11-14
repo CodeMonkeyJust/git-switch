@@ -109,7 +109,10 @@ test('the GUI reports a malformed profile instead of writing', async () => {
         assert.ok(body.dirty === false || body.errors.length > 0 || true);
       }
       const state = await fetch(`${base}/api/state`, { headers: auth });
-      assert.equal(state.status, 400, 'state must refuse an invalid profile');
+      assert.equal(state.status, 200, 'the UI must still load so it can show the error');
+      const stateBody = (await state.json()) as { profileError?: string; identities: unknown[] };
+      assert.ok(stateBody.profileError, 'the malformed profile is reported, not hidden');
+      assert.deepEqual(stateBody.identities, [], 'no data is invented for an invalid profile');
 
       const after = await h.read('.gitconfig');
       assert.equal(after, '', 'nothing was written');

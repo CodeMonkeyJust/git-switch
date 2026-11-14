@@ -258,28 +258,44 @@ async function handleApi(
 
   try {
     if (url.pathname === '/api/state' && method === 'GET') {
-      const profiles = await loadProfiles(ctx.home);
-      const dir = url.searchParams.get('dir');
-      const resolution = dir ? resolveIdentity(profiles, normaliseRulePath(dir, ctx.home)) : undefined;
-
       // The UI reads its strings from the catalogue so a single language switch
       // covers both CLI and browser.
       const requested = url.searchParams.get('lang');
       if (requested) setLanguage(resolveLanguage(requested));
 
-      sendJson(res, 200, {
+      const base = {
         home: contractHome(ctx.home, ctx.home),
-        // A GUI started with --home looks identical to the real one. Tell the page
-        // which home it is operating on so a user never mistakes a sandbox for
-        // their live configuration.
         realHome: os.homedir(),
         isSandbox: path.resolve(ctx.home) !== path.resolve(os.homedir()),
         homePath: toPosix(ctx.home),
         language: getLanguage(),
         messages: webCatalogue(),
         profileExists: await profilesExist(ctx.home),
-        // the identity git uses for every directory without a rule
         globalIdentity: formatIdentity(await readGlobalIdentity(ctx.home)) ?? null,
+      };
+
+      let profiles: Profiles;
+      try {
+        profiles = await loadProfiles(ctx.home);
+      } catch (err) {
+        // A broken profile must not blank the whole UI: the user needs somewhere
+        // to see what is wrong. Report the problem with empty data so every
+        // screen still renders and can explain itself.
+        sendJson(res, 200, {
+          ...base,
+          profileError: (err as Error).message,
+          identities: [],
+          rules: [],
+          repositories: [],
+        });
+        return;
+      }
+
+      const dir = url.searchParams.get('dir');
+      const resolution = dir ? resolveIdentity(profiles, normaliseRulePath(dir, ctx.home)) : undefined;
+
+      sendJson(res, 200, {
+        ...base,
         ...profileSummary(ctx.home, profiles),
         ...(resolution
           ? { resolved: { identity: resolution.identity.name, reason: resolution.reason, detail: resolution.detail } }

@@ -25,9 +25,33 @@ test('parseLanguage understands the usual tag shapes', () => {
   assert.equal(parseLanguage('zh-CN'), 'zh-CN');
   assert.equal(parseLanguage('zh_CN'), 'zh-CN');
   assert.equal(parseLanguage('zh-Hans'), 'zh-CN');
-  assert.equal(parseLanguage('fr'), undefined, 'unsupported languages are ignored');
   assert.equal(parseLanguage(''), undefined);
   assert.equal(parseLanguage(undefined), undefined);
+});
+
+test('languages without a catalogue fall back to English, not to the OS language', () => {
+  // A user asking for Japanese must get English; silently showing the system
+  // language instead would look like the flag was ignored.
+  for (const tag of ['ja', 'ja-JP', 'ko', 'de-DE', 'fr', 'ru', 'ar', 'pt-BR', 'es']) {
+    assert.equal(parseLanguage(tag), 'en', `${tag} should resolve to en`);
+  }
+});
+
+test('traditional Chinese falls back to English rather than simplified', () => {
+  // zh-TW / zh-HK users would otherwise be shown simplified text they did not ask for
+  assert.equal(parseLanguage('zh-TW'), 'en');
+  assert.equal(parseLanguage('zh-HK'), 'en');
+  assert.equal(parseLanguage('zh-Hant'), 'en');
+  // simplified variants do map to the zh-CN catalogue
+  for (const tag of ['zh', 'zh-CN', 'zh-SG', 'zh-MY', 'zh-Hans']) {
+    assert.equal(parseLanguage(tag), 'zh-CN', `${tag} should resolve to zh-CN`);
+  }
+});
+
+test('a malformed tag has no opinion and falls through', () => {
+  for (const tag of ['', '   ', '123', 'x', 'zh-CN-extra-bits!!!']) {
+    assert.equal(parseLanguage(tag), undefined, `${JSON.stringify(tag)} should be ignored`);
+  }
 });
 
 test('translate substitutes positional placeholders', () => {
@@ -81,12 +105,32 @@ test('--lang wins over GS_LANG, which wins over the system locale', () => {
     assert.equal(resolveLanguage('en'), 'en', 'explicit flag beats the environment');
     assert.equal(resolveLanguage(), 'zh-CN', 'the environment beats the system locale');
 
+    // an unsupported GS_LANG resolves to English rather than leaking the OS one
+    process.env.GS_LANG = 'ja-JP';
+    assert.equal(resolveLanguage(), 'en');
+
     delete process.env.GS_LANG;
     const detected = resolveLanguage();
     assert.ok(SUPPORTED_LANGUAGES.includes(detected));
   } finally {
     if (original === undefined) delete process.env.GS_LANG;
     else process.env.GS_LANG = original;
+  }
+});
+
+test('the system language is detected without any environment variable', () => {
+  const saved = { GS_LANG: process.env.GS_LANG, LANG: process.env.LANG, LC_ALL: process.env.LC_ALL };
+  try {
+    delete process.env.GS_LANG;
+    delete process.env.LANG;
+    delete process.env.LC_ALL;
+    const detected = resolveLanguage();
+    assert.ok(SUPPORTED_LANGUAGES.includes(detected), `unexpected system language ${detected}`);
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   }
 });
 

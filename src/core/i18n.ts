@@ -12,6 +12,8 @@
  * break the CLI.
  */
 
+import { execFileSync } from 'node:child_process';
+
 export type Language = 'en' | 'zh-CN';
 
 export const SUPPORTED_LANGUAGES: Language[] = ['en', 'zh-CN'];
@@ -32,14 +34,48 @@ export function getLanguage(): Language {
 /**
  * Normalise a user-supplied language tag.
  * Accepts `zh`, `zh-cn`, `zh_CN`, `ZH`, `en`, `en-US`, …
+ *
+ * Returns `'en'` for a tag we recognise as a real language but do not translate:
+ * a user who asks for Japanese should get English, never the OS language by
+ * accident. Returns `undefined` only when the tag is empty or unparseable, which
+ * means "no opinion — fall through to the next source".
  */
 export function parseLanguage(input: string | undefined): Language | undefined {
   if (!input) return undefined;
   const tag = input.trim().toLowerCase().replace('_', '-');
   if (tag === '') return undefined;
+
   if (tag === 'en' || tag.startsWith('en-')) return 'en';
-  if (tag === 'zh' || tag.startsWith('zh-')) return 'zh-CN';
+  // Simplified Chinese only: zh-TW / zh-HK would otherwise show simplified text
+  if (tag === 'zh' || tag === 'zh-cn' || tag === 'zh-hans' || tag === 'zh-sg' || tag === 'zh-my') {
+    return 'zh-CN';
+  }
+  // Traditional Chinese and every other language have no catalogue yet
+  if (/^[a-z]{2}(-[a-z0-9]+)*$/.test(tag)) return 'en';
   return undefined;
+}
+
+/**
+ * The language Windows actually displays its UI in.
+ *
+ * `Intl.DateTimeFormat().resolvedOptions().locale` follows the *regional format*
+ * setting, which is not the same thing: a Chinese machine set to English display
+ * language (or the reverse) is common. On Windows, `wmic`/PowerShell exposes the
+ * real UI culture, so ask it and fall back to Intl when that is unavailable.
+ */
+function windowsUiLanguage(): Language | undefined {
+  if (process.platform !== 'win32') return undefined;
+  try {
+    // synchronous on purpose: language must be resolved before the first message
+    const out = execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', '(Get-UICulture).Name'], {
+      timeout: 3000,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return parseLanguage(out.toString().trim());
+  } catch {
+    return undefined;
+  }
 }
 
 /** Detect the operating system language without spawning a process on POSIX. */
@@ -51,6 +87,9 @@ export function detectSystemLanguage(): Language {
     parseLanguage(env.LANG) ??
     undefined;
   if (fromEnv) return fromEnv;
+
+  const fromWindows = windowsUiLanguage();
+  if (fromWindows) return fromWindows;
 
   try {
     // `Intl` reflects the OS locale on every supported platform

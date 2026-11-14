@@ -61,6 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Language follows the system by default, and unsupported languages fall back
+  to English.** Previously `GS_LANG=ja-JP` produced *Chinese* output on a Chinese
+  machine: the unknown tag was discarded and the OS language won by accident. A
+  tag we recognise but do not translate (`ja`, `de-DE`, …) now resolves to
+  English directly, while an empty or malformed tag still falls through to the
+  next source.
+- Traditional Chinese (`zh-TW`, `zh-HK`, `zh-Hant`) now resolves to English
+  instead of being shown simplified Chinese, which those users did not ask for.
+- On Windows the UI language comes from `(Get-UICulture)` rather than
+  `Intl.DateTimeFormat()`, which follows the *regional format* setting; an
+  English-display machine with a Chinese region is a common mismatch.
 - **The tab bar now follows the setup dependency chain**: Keys → Identities →
   Rules → Preview. A key exists first, an identity uses it, a rule assigns a
   directory to that identity, and only then is there anything to apply.

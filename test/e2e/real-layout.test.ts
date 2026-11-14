@@ -37,7 +37,7 @@ test('after apply, git resolves one identity per directory', async () => {
   const code = path.join(h.home, 'code');
   try {
     const repos = {
-      pde: path.join(code, 'PDE-GIT', 'pdes-ctcis'),
+      pde: path.join(code, 'company', 'internal-tool'),
       gh: path.join(code, 'github', 'nocobase'),
       mine: path.join(code, 'MyGithub', 'new-api-stat'),
       unset: path.join(code, 'gitee', 'JeecgBoot'),
@@ -49,7 +49,7 @@ test('after apply, git resolves one identity per directory', async () => {
 
     await writeFile(
       path.join(h.home, '.gitconfig'),
-      '[user]\n\tname = zhulj\n\temail = zhulj@pde.com.cn\n',
+      '[user]\n\tname = Alex Chen\n\temail = alex@company.example\n',
       'utf8',
     );
 
@@ -58,21 +58,21 @@ test('after apply, git resolves one identity per directory', async () => {
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
 rules:
-  - dir: ${posix(code)}/PDE-GIT
+  - dir: ${posix(code)}/company
     identity: work
   - dir: ${posix(code)}/github
     identity: personal
@@ -84,12 +84,12 @@ rules:
 
     await apply(await plan({ home: h.home, profiles }), { home: h.home });
 
-    assert.equal(await gitEmail(h.home, repos.pde), 'zhulj@pde.com.cn');
-    assert.equal(await gitEmail(h.home, repos.gh), 'zlj20@163.com');
-    assert.equal(await gitEmail(h.home, repos.mine), 'zlj20@163.com', 'MyGithub shares the personal rule');
+    assert.equal(await gitEmail(h.home, repos.pde), 'alex@company.example');
+    assert.equal(await gitEmail(h.home, repos.gh), 'alex@personal.example');
+    assert.equal(await gitEmail(h.home, repos.mine), 'alex@personal.example', 'MyGithub shares the personal rule');
     assert.equal(
       await gitEmail(h.home, repos.unset),
-      'zhulj@pde.com.cn',
+      'alex@company.example',
       'a directory without a rule keeps the global identity',
     );
   } finally {
@@ -156,7 +156,7 @@ rules:
 test('the generated gitconfig keeps foreign content and stays idempotent', async () => {
   const h = await createTmpHome();
   try {
-    const foreign = '[user]\n\tname = zhulj\n\temail = z@example.com\n[credential "https://gitee.com"]\n\tprovider = generic\n';
+    const foreign = '[user]\n\tname = Alex Chen\n\temail = z@example.com\n[credential "https://gitee.com"]\n\tprovider = generic\n';
     await writeFile(path.join(h.home, '.gitconfig'), foreign, 'utf8');
 
     const profiles = parseProfilesText(

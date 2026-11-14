@@ -43,7 +43,7 @@ const MUST_PASS: [string, Record<string, unknown>][] = [
   ['a key file name', { sshKey: 'id_ed25519' }],
   ['a directory', { dir: '/code/work' }],
   ['an alias', { alias: 'pde' }],
-  ['a user name', { name: 'zhulj' }],
+  ['a user name', { name: 'Alex Chen' }],
   ['a ssh user', { user: 'git' }],
   ['a comment mentioning secret', { comment: 'my secret santa folder' }],
 ];
@@ -94,8 +94,8 @@ test('a credential pasted into a profile file is refused by the loader', () => {
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@example.com
+      name: Alex Chen
+      email: alex@example.com
       password: hunter2
 rules: []
 `,
@@ -113,8 +113,8 @@ test('a token value pasted as a comment is refused by the loader', () => {
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@example.com
+      name: Alex Chen
+      email: alex@example.com
 rules:
   - dir: /code
     identity: work

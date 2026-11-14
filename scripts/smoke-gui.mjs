@@ -38,11 +38,11 @@ async function main() {
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
         alias: pde
 rules:

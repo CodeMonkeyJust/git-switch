@@ -66,17 +66,17 @@ npm install && npm run build && node dist/gs.mjs init
 ```
 $ gs init
 i detected
-·   git identity   zhulj <zhulj@pde.com.cn>
+·   git identity   Alex Chen <alex@example.com>
 ·   ssh hosts      3
 ·   repositories   4
 i proposed identities
-·   github       zhulj <zhulj@pde.com.cn>  → ssh.github.com
-·   pdesoft      zhulj <zhulj@pde.com.cn>  → git.pdesoft.cn
-·   gitee        zhulj <zhulj@pde.com.cn>  → gitee.com
+·   github       Alex Chen <alex@example.com>  → ssh.github.com
+·   company      Alex Chen <alex@example.com>  → git.example.com
+·   gitee        Alex Chen <alex@example.com>  → gitee.com
 i proposed rules
-·   ~/code/github  →  github
-·   ~/code/gitee  →  gitee
-·   ~/code/PDE-GIT  →  pdesoft
+·   ~/code/github   →  github
+·   ~/code/gitee    →  gitee
+·   ~/code/company  →  company
 ! gitee.com: no SSH key associated yet; add sshKey to the identity in profiles.yaml
 ✓ wrote ~/.config/gs/profiles.yaml
 · next: gs diff   (preview)   then   gs apply
@@ -96,17 +96,17 @@ schemaVersion: 1
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
-        alias: pde
+        alias: work
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
@@ -115,9 +115,9 @@ identities:
         alias: gh
 
 rules:
-  - dir: D:/CODE/PDE-GIT
+  - dir: ~/code/company
     identity: work
-  - dir: D:/CODE/github
+  - dir: ~/code/github
     identity: personal
 
 settings:
@@ -168,7 +168,7 @@ gs key list                          # check which keys each identity uses
 gs snapshot export backup.gsnap --with-keys   # encrypted: keys included
 
 # new machine
-gs snapshot import backup.gsnap --remap D:/CODE=/home/me/code
+gs snapshot import backup.gsnap --remap ~/code=/home/me/code
 gs doctor                            # confirms what is still missing
 gs apply
 ```
@@ -182,7 +182,7 @@ Notes:
   loudly; nothing is written.
 - Keys inside a snapshot are **never** written to `~/.ssh` automatically.
 - `--remap` rewrites directory rules when the layout differs, matching whole path
-  segments only (`D:/CODE` does not touch `D:/CODEX`).
+  segments only (`~/code` does not touch `~/codex`).
 - The snapshot carries only the `gs`-managed block of `~/.ssh/config`, never your
   own entries.
 
@@ -225,7 +225,7 @@ $ gs doctor
 ! work: no SSH key configured
 ✓ ~/.ssh/id_ed25519_github present
 ✓ ~/.ssh/config managed block present
-✓ identity here: zlj20@163.com
+✓ identity here: alex@personal.example
 ! connectivity not probed
 ·    pass --online to run real ssh handshakes
 ```
@@ -257,9 +257,9 @@ Generated `~/.gitconfig` block:
 
 ```ini
 # >>> gs:managed >>>
-[includeIf "gitdir:D:/CODE/PDE-GIT/"]
+[includeIf "gitdir:~/code/company/"]
 	path = ~/.config/gs/identities/work.gitconfig
-[includeIf "gitdir:D:/CODE/github/"]
+[includeIf "gitdir:~/code/github/"]
 	path = ~/.config/gs/identities/personal.gitconfig
 # <<< gs:managed <<<
 ```

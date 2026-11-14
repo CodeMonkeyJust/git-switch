@@ -40,8 +40,8 @@ async function seedProfile(home: string, keyName = 'id_missing'): Promise<void> 
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@example.com
+      name: Alex Chen
+      email: alex@example.com
     sshKey: ${keyName}
     sites:
       - host: git.example.com
@@ -201,7 +201,7 @@ test('gs snapshot export then import round-trips a profile', async () => {
     const { loadProfiles } = await import('../../src/core/profiles.ts');
     const migrated = await loadProfiles(target.home);
     assert.equal(migrated.identities.length, 1);
-    assert.equal(migrated.identities[0]?.user.email, 'zhulj@example.com');
+    assert.equal(migrated.identities[0]?.user.email, 'alex@example.com');
   } finally {
     await source.cleanup();
     await target.cleanup();

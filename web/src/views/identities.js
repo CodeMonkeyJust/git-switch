@@ -145,7 +145,7 @@ function identityEditor(container, app, identity, site, keyNames) {
   const error = el('div', { class: 'form-error', text: '' });
 
   const name = textInput(identity.name, t('web.identityNameHint'));
-  const userName = textInput(identity.userName, 'zhulj');
+  const userName = textInput(identity.userName, 'Alex Chen');
   const email = textInput(identity.email, 'you@example.com');
   const sshKey = keySelect(identity.sshKey, keyNames);
   const host = textInput(site?.host ?? '', t('web.hostHint'));
@@ -210,7 +210,7 @@ function identityForm(container, app, keyNames) {
   const error = el('div', { class: 'form-error', text: '' });
 
   const name = textInput('', 'gitee');
-  const userName = textInput('', 'zhulj');
+  const userName = textInput('', 'Alex Chen');
   const email = textInput('', 'you@example.com');
   const sshKey = keySelect('', keyNames);
   const host = textInput('', t('web.hostHint'));

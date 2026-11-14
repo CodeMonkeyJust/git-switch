@@ -19,8 +19,8 @@ const PROFILE = `schemaVersion: 1
 identities:
   github:
     user:
-      name: zlj20
-      email: zlj20@example.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_gh
     sites:
       - host: github.com
@@ -78,7 +78,7 @@ test('editing an identity keeps sshHostName when the form omits it', async () =>
       update: true,
       original: 'github',
       name: 'github',
-      userName: 'zlj20',
+      userName: 'alexchen',
       email: 'new@example.com',
       sshKey: 'id_gh',
       host: 'github.com',
@@ -100,8 +100,8 @@ test('sshHostName can be set explicitly through the form', async () => {
       update: true,
       original: 'github',
       name: 'github',
-      userName: 'zlj20',
-      email: 'zlj20@example.com',
+      userName: 'alexchen',
+      email: 'alex@personal.example',
       sshKey: 'id_gh',
       host: 'github.com',
       port: '443',
@@ -123,8 +123,8 @@ test('a URL in sshHostName is rejected, not stored', async () => {
       update: true,
       original: 'github',
       name: 'github',
-      userName: 'zlj20',
-      email: 'zlj20@example.com',
+      userName: 'alexchen',
+      email: 'alex@personal.example',
       sshKey: 'id_gh',
       host: 'github.com',
       sshHostName: 'https://ssh.github.com/',

@@ -51,7 +51,7 @@ export async function availableKeys(home: string): Promise<string[]> {
 
 async function tryKey(opts: ProbeOptions, keyName: string, timeoutMs: number): Promise<boolean> {
   // Git hosting servers authenticate as the `git` user, not as the local account
-  // name; ssh would otherwise offer `zhulj@host` and be rejected.
+  // name; ssh would otherwise offer `otheruser@host` and be rejected.
   const user = opts.user ?? 'git';
   const target = `${user}@${opts.host}`;
   const args = [

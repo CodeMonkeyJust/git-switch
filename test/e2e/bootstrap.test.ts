@@ -38,7 +38,7 @@ test('from nothing to a working setup: init then apply', async () => {
   const h = await createTmpHome();
 
   // a machine as it looks before gs: global identity, ssh hosts, repos
-  await h.write('.gitconfig', '[user]\n\tname = zhulj\n\temail = zhulj@pde.com.cn\n');
+  await h.write('.gitconfig', '[user]\n\tname = Alex Chen\n\temail = alex@company.example\n');
   await h.write(
     '.ssh/config',
     [
@@ -49,8 +49,8 @@ test('from nothing to a working setup: init then apply', async () => {
       '  IdentityFile ~/.ssh/id_ed25519_github',
       '  IdentitiesOnly yes',
       '',
-      'Host pdesoft',
-      '  HostName git.pdesoft.cn',
+      'Host worksoft',
+      '  HostName git.company.example',
       '  Port 9092',
       '  User git',
       '  IdentityFile ~/.ssh/id_ed25519',
@@ -64,7 +64,7 @@ test('from nothing to a working setup: init then apply', async () => {
 
   const repos = [
     { dir: 'code/github/nocobase', remote: 'git@github.com:nocobase/nocobase.git' },
-    { dir: 'code/PDE-GIT/pdes-ctcis', remote: 'ssh://git@git.pdesoft.cn:9092/PDES4.0/x.git' },
+    { dir: 'code/company/internal-tool', remote: 'ssh://git@git.company.example:9092/group/x.git' },
   ];
   for (const repo of repos) {
     const dir = path.join(h.home, repo.dir);
@@ -98,13 +98,13 @@ test('from nothing to a working setup: init then apply', async () => {
 
     // 4. real git resolves per-directory identities and routes remotes
     const ghDir = path.join(h.home, 'code', 'github', 'nocobase');
-    const pdeDir = path.join(h.home, 'code', 'PDE-GIT', 'pdes-ctcis');
+    const pdeDir = path.join(h.home, 'code', 'company', 'internal-tool');
 
     const ghOrigin = await gitIn(h.home, ghDir, ['config', '--show-origin', '--get', 'user.email']);
     assert.match(ghOrigin, /identities[\/\\]github\.gitconfig/);
 
     const pdeOrigin = await gitIn(h.home, pdeDir, ['config', '--show-origin', '--get', 'user.email']);
-    assert.match(pdeOrigin, /identities[\/\\]pdesoft\.gitconfig/);
+    assert.match(pdeOrigin, /identities[\/\\]company\.gitconfig/);
 
     // the github remote must stay pointed at github.com, routed via the alias
     const routed = await gitIn(h.home, ghDir, ['ls-remote', '--get-url', 'origin']);
@@ -113,7 +113,7 @@ test('from nothing to a working setup: init then apply', async () => {
     // the pde remote must be routed through its own alias, with the custom port
     // removed from the path (ssh config supplies it)
     const pdeRouted = await gitIn(h.home, pdeDir, ['ls-remote', '--get-url', 'origin']);
-    assert.match(pdeRouted.trim(), /^git@[^:]+:PDES4\.0\/x\.git$/, `unexpected route: ${pdeRouted}`);
+    assert.match(pdeRouted.trim(), /^git@[^:]+:group\/x\.git$/, `unexpected route: ${pdeRouted}`);
     assert.ok(!/:9092\//.test(pdeRouted), 'the port must not leak into the path');
 
     // 5. the ssh config keeps the user's original entries untouched

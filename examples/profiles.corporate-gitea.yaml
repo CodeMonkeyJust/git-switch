@@ -3,31 +3,31 @@ schemaVersion: 1
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
-        alias: pde
+        alias: work
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
         alias: gh
 rules:
-  - dir: D:/CODE/PDE-GIT
+  - dir: ~/code/company
     identity: work
     comment: corporate repositories
-  - dir: D:/CODE/github
+  - dir: ~/code/github
     identity: personal
-  - dir: D:/CODE/MyGithub
+  - dir: ~/code/personal
     identity: personal
 repositories:
-  - path: D:/CODE/MyGithub/legacy-corporate-tool
+  - path: ~/code/personal/legacy-corporate-tool
     identity: work
 settings:
   backupKeep: 20

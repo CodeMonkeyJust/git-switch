@@ -26,19 +26,19 @@ test('a snapshot migrates a profile to a differently laid out machine', async ()
 identities:
   github:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
         alias: gh
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519_pde
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
         alias: pde
 rules:
@@ -82,9 +82,9 @@ rules:
 
     // identities and sites survive the trip unchanged
     const github = profilesB.identities.find((i) => i.name === 'github');
-    assert.equal(github?.user.email, 'zlj20@163.com');
+    assert.equal(github?.user.email, 'alex@personal.example');
     assert.equal(github?.sshKey, 'id_ed25519_github');
-    assert.ok(profilesB.sites.some((s) => s.host === 'git.pdesoft.cn' && s.port === 9092));
+    assert.ok(profilesB.sites.some((s) => s.host === 'git.company.example' && s.port === 9092));
   } finally {
     await source.cleanup();
     await target.cleanup();

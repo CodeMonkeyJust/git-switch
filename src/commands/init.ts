@@ -363,7 +363,7 @@ function identityNameFor(host: string): string {
     .toLowerCase()
     .replace(/^ssh\./, '')
     .replace(/^www\./, '');
-  // `git.pdesoft.cn` -> `pde`; `github.com` -> `github`
+  // `git.example.cn` -> `work`; `github.com` -> `github`
   const parts = base.split('.').filter(Boolean);
   const first = parts[0] ?? 'host';
   const cleaned = (first === 'git' && parts.length > 1 ? (parts[1] as string) : first)

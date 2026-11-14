@@ -18,11 +18,11 @@ const BROKEN_HOST = `schemaVersion: 1
 identities:
   pdegit:
     user:
-      name: zhulj
-      email: zhulj@example.com
+      name: Alex Chen
+      email: alex@example.com
     sshKey: id_key
     sites:
-      - host: http://git.pdesoft.cn:9090/
+      - host: http://git.company.example:9090/
 rules: []
 `;
 
@@ -30,8 +30,8 @@ const VALID = `schemaVersion: 1
 identities:
   ok:
     user:
-      name: zhulj
-      email: zhulj@example.com
+      name: Alex Chen
+      email: alex@example.com
 rules: []
 `;
 

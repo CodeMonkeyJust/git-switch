@@ -20,10 +20,10 @@ function profileFor(home: string, key: string | undefined): ReturnType<typeof pa
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
 ${keyLine}    sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
         alias: pde
 rules:
@@ -95,9 +95,10 @@ test('checkSshConfig flags a missing managed block', async () => {
 test('checkSshConfig detects an alias shadowed by the user`s own Host block', async () => {
   const h = await createTmpHome();
   try {
+    // the profile's own alias also appears outside the managed block
     await h.write(
       '.ssh/config',
-      ['Host pde', '  User root', '', '# >>> gs:managed >>>', 'Host pde2', '  HostName x', '# <<< gs:managed <<<', ''].join('\n'),
+      ['Host pde', '  User root', '', '# >>> gs:managed >>>', 'Host pde', '  HostName x', '# <<< gs:managed <<<', ''].join('\n'),
     );
     const results = await checkSshConfig(h.home, profileFor(h.home, 'id_ed25519'));
     assert.ok(results.some((r) => r.level === 'warn' && /defined outside the gs block/.test(r.title)));
@@ -132,7 +133,7 @@ test('checkGitIdentityForDirectory confirms a gs-managed identity inside a repo'
     const identity = results.find((r) => r.id === 'dir:identity');
     assert.ok(identity);
     assert.equal(identity.level, 'ok');
-    assert.match(identity.title, /identity here: zhulj@pde\.com\.cn/);
+    assert.match(identity.title, /identity here: alex@company.example/);
   } finally {
     await h.cleanup();
   }

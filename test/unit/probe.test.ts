@@ -5,8 +5,8 @@ import { availableKeys } from '../../src/core/probe.ts';
 import { createTmpHome } from '../helpers/tmp-home.ts';
 
 test('parseRemoteTarget extracts host, port and user from ssh:// remotes', () => {
-  const target = parseRemoteTarget('ssh://git@git.pdesoft.cn:9092/PDES4.0/x.git');
-  assert.deepEqual(target, { host: 'git.pdesoft.cn', port: 9092, user: 'git' });
+  const target = parseRemoteTarget('ssh://git@git.company.example:9092/group/x.git');
+  assert.deepEqual(target, { host: 'git.company.example', port: 9092, user: 'git' });
 });
 
 test('parseRemoteTarget extracts host and user from scp-style remotes', () => {

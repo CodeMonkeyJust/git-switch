@@ -43,7 +43,7 @@ async function seedProfile(home: string): Promise<void> {
     '      name: w',
     '      email: w@example.com',
     'rules:',
-    '  - dir: D:/CODE/PDE-GIT',
+    '  - dir: D:/CODE/company',
     '    identity: w',
     '  - dir: D:/CODE/github',
     '    identity: w',
@@ -71,7 +71,7 @@ test('multiple --remap flags are all applied, not just the last one', async () =
     const imported = await runCli([
       'snapshot', 'import', snapshot,
       '--home', target.home,
-      '--remap', 'D:/CODE/PDE-GIT=/opt/pde',
+      '--remap', 'D:/CODE/company=/opt/pde',
       '--remap', 'D:/CODE/github=/opt/gh',
       '--remap', 'D:/CODE/gitee=/opt/gitee',
       '--no-color',
@@ -109,7 +109,7 @@ test('a single --remap still works', async () => {
 
     const { readFile } = await import('node:fs/promises');
     const written = await readFile(path.join(target.home, '.config', 'gs', 'profiles.yaml'), 'utf8');
-    assert.match(written, /- dir: \/home\/dev\/code\/PDE-GIT/);
+    assert.match(written, /- dir: \/home\/dev\/code\/company/);
     assert.match(written, /- dir: \/home\/dev\/code\/github/);
   } finally {
     await source.cleanup();
@@ -136,7 +136,7 @@ test('--remap=<spec> with an equals sign inside the value is parsed once', async
     const { readFile } = await import('node:fs/promises');
     const written = await readFile(path.join(target.home, '.config', 'gs', 'profiles.yaml'), 'utf8');
     assert.match(written, /- dir: \/srv\/gh/);
-    assert.match(written, /D:\/CODE\/PDE-GIT/, 'other rules stay untouched');
+    assert.match(written, /D:\/CODE\/company/, 'other rules stay untouched');
   } finally {
     await source.cleanup();
     await target.cleanup();
@@ -150,7 +150,7 @@ test('non-repeatable flags keep the last value', async () => {
     // --home given twice: the later one wins, so this must read the seeded profile
     const result = await runCli(['list', '--home', path.join(h.home, 'nope'), '--home', h.home, '--no-color']);
     assert.equal(result.code, 0, result.stderr + result.stdout);
-    assert.match(result.stdout, /PDE-GIT/);
+    assert.match(result.stdout, /company/);
   } finally {
     await h.cleanup();
   }

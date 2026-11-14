@@ -169,7 +169,7 @@ export async function readGlobalIdentity(home = homedir()): Promise<GlobalIdenti
   }
 }
 
-/** `zhulj <me@example.com>` or a partial value when only one half is set. */
+/** `Alex Chen <alex@example.com>` or a partial value when only one half is set. */
 export function formatIdentity(identity: GlobalIdentity | undefined): string | undefined {
   if (!identity) return undefined;
   if (identity.name && identity.email) return `${identity.name} <${identity.email}>`;

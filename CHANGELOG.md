@@ -71,6 +71,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **All example data in the docs, tests and sample profiles is now generic.** The
+  README, schema reference, `examples/`, test fixtures and code comments used a
+  real name, a real work and personal email address, a real company Git host and
+  a real directory layout. They now use `Alex Chen <alex@example.com>`,
+  `git.company.example`, `~/code/…` and `10.0.0.10`, so nothing personal ships
+  with the source.
 - **Language follows the system by default, and unsupported languages fall back
   to English.** Previously `GS_LANG=ja-JP` produced *Chinese* output on a Chinese
   machine: the unknown tag was discarded and the OS language won by accident. A

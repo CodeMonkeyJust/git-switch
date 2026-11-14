@@ -20,16 +20,16 @@ settings: {}          # optional
 identities:
   <name>:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519               # optional, file name under ~/.ssh
-    credentialUsername: zlj20@163.com # optional, HTTPS credential user
+    credentialUsername: alex@personal.example # optional, HTTPS credential user
     sites:                           # optional
-      - host: git.pdesoft.cn         # required — the REAL git host used in remotes
+      - host: git.company.example    # required — the REAL git host used in remotes
         port: 9092                   # optional
         user: git                    # optional, defaults to git
         sshKey: id_ed25519           # optional, overrides the identity key
-        alias: pde                   # optional SSH alias
+        alias: work                  # optional SSH alias
         sshHostName: ssh.example.com # optional, endpoint to dial instead of host
         alsoRoutes: [example.com]    # optional, extra hosts routed via this alias
 ```
@@ -48,7 +48,7 @@ identities:
 
 ```yaml
 rules:
-  - dir: D:/CODE/PDE-GIT
+  - dir: ~/code/company
     identity: work
     comment: corporate repositories   # optional, display only
 ```
@@ -61,7 +61,7 @@ rules:
 
 ```yaml
 repositories:
-  - path: D:/CODE/github/old-corporate-repo
+  - path: ~/code/personal/legacy-corporate-tool
     identity: work
 ```
 

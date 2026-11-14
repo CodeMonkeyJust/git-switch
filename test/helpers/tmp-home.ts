@@ -47,21 +47,21 @@ export const PROFILE_GITHUB_GITEE = `schemaVersion: 1
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
         alias: gh
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
-        alias: pde
+        alias: work
 rules:
   - dir: __HOME__/code/personal
     identity: personal

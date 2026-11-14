@@ -1,9 +1,11 @@
+# A single personal identity: every repository outside a rule uses the global
+# identity, and ~/code/personal is pinned to this one.
 schemaVersion: 1
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: Alex Chen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com

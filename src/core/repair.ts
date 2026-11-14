@@ -1,7 +1,7 @@
 /**
  * Repair a profile field that failed validation.
  *
- * A user pastes `http://git.pdesoft.cn:9090/` into the site's host field and the
+ * A user pastes `http://git.example.com:9090/` into the site's host field and the
  * whole profile stops loading. Telling them the YAML path is not enough: they
  * opened a GUI precisely because they do not want to edit YAML. This module
  * recognises the common mistakes and rewrites the file in place, keeping

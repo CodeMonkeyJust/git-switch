@@ -72,17 +72,17 @@ gs list     # 查看当前目录归属哪个身份
 ```
 $ gs init
 i 探测结果
-·   git 身份        zhulj <zhulj@pde.com.cn>
+·   git 身份        Alex Chen <alex@example.com>
 ·   SSH 主机        3
 ·   仓库            4
 i 建议的身份
-·   github       zhulj <zhulj@pde.com.cn>  → ssh.github.com
-·   pdesoft      zhulj <zhulj@pde.com.cn>  → git.pdesoft.cn
-·   gitee        zhulj <zhulj@pde.com.cn>  → gitee.com
+·   github       Alex Chen <alex@example.com>  → ssh.github.com
+·   company      Alex Chen <alex@example.com>  → git.example.com
+·   gitee        Alex Chen <alex@example.com>  → gitee.com
 i 建议的目录规则
-·   ~/code/github  →  github
-·   ~/code/gitee   →  gitee
-·   ~/code/PDE-GIT →  pdesoft
+·   ~/code/github   →  github
+·   ~/code/gitee    →  gitee
+·   ~/code/company  →  company
 ! gitee.com：暂时没有可用的 SSH 密钥，请在 profiles.yaml 中为该身份设置 sshKey
 ✓ 已写入 ~/.config/gs/profiles.yaml
 · 下一步：gs diff   （预览）   然后   gs apply
@@ -95,17 +95,17 @@ schemaVersion: 1
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
-        alias: pde
+        alias: work
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
@@ -114,9 +114,9 @@ identities:
         alias: gh
 
 rules:
-  - dir: D:/CODE/PDE-GIT
+  - dir: ~/code/company
     identity: work
-  - dir: D:/CODE/github
+  - dir: ~/code/github
     identity: personal
 
 settings:
@@ -165,7 +165,7 @@ gs key list                                   # 确认每个身份用的是哪�
 gs snapshot export backup.gsnap --with-keys   # 含私钥，整体加密
 
 # 新机器
-gs snapshot import backup.gsnap --remap D:/CODE=/home/me/code
+gs snapshot import backup.gsnap --remap ~/code=/home/me/code
 gs doctor                                     # 确认还缺什么
 gs apply
 ```
@@ -178,7 +178,7 @@ gs apply
   （或 `GS_PASSPHRASE`）加密。口令错误会明确失败，且不写入任何内容。
 - 快照里的私钥**绝不会**被自动写入 `~/.ssh`。
 - `--remap` 在目录结构不同时改写规则，只匹配完整路径段
-  （`D:/CODE` 不会误伤 `D:/CODEX`）。
+  （`~/code` 不会误伤 `~/codex`）。
 - 快照只包含 `gs` 托管的 `~/.ssh/config` 块，不含你自己的配置。
 
 ### `gs gui`
@@ -229,7 +229,7 @@ $ gs doctor
 ! work：未配置 SSH 密钥
 ✓ ~/.ssh/id_ed25519_github 存在
 ✓ ~/.ssh/config 中存在托管块
-✓ 当前身份：zlj20@163.com
+✓ 当前身份：alex@personal.example
 ! 未进行连通性探测
 ·    加 --online 可执行真实的 ssh 握手
 ```
@@ -260,9 +260,9 @@ profiles.yaml
 
 ```ini
 # >>> gs:managed >>>
-[includeIf "gitdir:D:/CODE/PDE-GIT/"]
+[includeIf "gitdir:~/code/company/"]
 	path = ~/.config/gs/identities/work.gitconfig
-[includeIf "gitdir:D:/CODE/github/"]
+[includeIf "gitdir:~/code/github/"]
 	path = ~/.config/gs/identities/personal.gitconfig
 # <<< gs:managed <<<
 ```

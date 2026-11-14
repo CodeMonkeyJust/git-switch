@@ -16,13 +16,13 @@ function profile(rules: string, identityExtra = ''): string {
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
-${body}`.replace('      email: zhulj@pde.com.cn\n', `      email: zhulj@pde.com.cn\n${identityExtra}`);
+      name: Alex Chen
+      email: alex@company.example
+${body}`.replace('      email: alex@company.example\n', `      email: alex@company.example\n${identityExtra}`);
 }
 
 test('rejects passwords, tokens and private keys in profiles.yaml', () => {
@@ -32,8 +32,8 @@ test('rejects passwords, tokens and private keys in profiles.yaml', () => {
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     password: hunter2
 rules: []
 `),

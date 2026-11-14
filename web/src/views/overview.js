@@ -83,7 +83,7 @@ function globalIdentityForm(container, app, state) {
     type: 'text',
     class: 'input',
     value: currentName,
-    placeholder: 'zhulj',
+    placeholder: 'Alex Chen',
   });
   const emailInput = el('input', {
     type: 'text',

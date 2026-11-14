@@ -22,8 +22,8 @@ await writeFile(
 identities:
   work:
     user:
-      name: zhulj
-      email: zhulj@example.com
+      name: Alex Chen
+      email: alex@example.com
     sshKey: id_work
     sites:
       - host: git.example.com

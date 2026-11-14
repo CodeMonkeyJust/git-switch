@@ -19,8 +19,8 @@ const PROFILE = `schemaVersion: 1
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@example.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_gh
     sites:
       - host: github.com
@@ -55,11 +55,11 @@ async function seed(home: string, gitconfig: string): Promise<void> {
 test('readGlobalIdentity reads user.name and user.email', async () => {
   const h = await createTmpHome();
   try {
-    await seed(h.home, '[user]\n\tname = zhulj\n\temail = zhulj@company.example\n');
+    await seed(h.home, '[user]\n\tname = Alex Chen\n\temail = alex@company.example\n');
     const identity = await readGlobalIdentity(h.home);
-    assert.equal(identity?.name, 'zhulj');
-    assert.equal(identity?.email, 'zhulj@company.example');
-    assert.equal(formatIdentity(identity), 'zhulj <zhulj@company.example>');
+    assert.equal(identity?.name, 'Alex Chen');
+    assert.equal(identity?.email, 'alex@company.example');
+    assert.equal(formatIdentity(identity), 'Alex Chen <alex@company.example>');
   } finally {
     await h.cleanup();
   }
@@ -85,7 +85,7 @@ test('gs list names the global identity when no rule matches', async () => {
   const h = await createTmpHome();
   const out = capture();
   try {
-    await seed(h.home, '[user]\n\tname = zhulj\n\temail = zhulj@company.example\n');
+    await seed(h.home, '[user]\n\tname = Alex Chen\n\temail = alex@company.example\n');
     const elsewhere = path.join(h.home, 'elsewhere');
     await mkdir(elsewhere, { recursive: true });
 
@@ -98,7 +98,7 @@ test('gs list names the global identity when no rule matches', async () => {
 
     const text = out.text();
     assert.match(text, /no matching rule|没有匹配的规则/);
-    assert.match(text, /zhulj <zhulj@company\.example>/, `the fallback identity is not named: ${text}`);
+    assert.match(text, /Alex Chen <alex@company\.example>/, `the fallback identity is not named: ${text}`);
   } finally {
     await h.cleanup();
   }
@@ -108,7 +108,7 @@ test('gs list still prints the global identity when a rule does match', async ()
   const h = await createTmpHome();
   const out = capture();
   try {
-    await seed(h.home, '[user]\n\tname = zhulj\n\temail = zhulj@company.example\n');
+    await seed(h.home, '[user]\n\tname = Alex Chen\n\temail = alex@company.example\n');
     const dir = path.join(h.home, 'code', 'github');
     await mkdir(dir, { recursive: true });
 
@@ -122,7 +122,7 @@ test('gs list still prints the global identity when a rule does match', async ()
     const text = out.text();
     assert.match(text, /directory rule/);
     assert.match(text, /global identity|全局身份/, 'the global identity section is always shown');
-    assert.match(text, /zhulj <zhulj@company\.example>/);
+    assert.match(text, /Alex Chen <alex@company\.example>/);
   } finally {
     await h.cleanup();
   }

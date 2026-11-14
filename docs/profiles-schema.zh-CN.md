@@ -20,16 +20,16 @@ settings: {}          # 可选
 identities:
   <名称>:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519               # 可选，~/.ssh 下的文件名
-    credentialUsername: zlj20@163.com # 可选，HTTPS 凭据用户名
+    credentialUsername: alex@personal.example # 可选，HTTPS 凭据用户名
     sites:                           # 可选
-      - host: git.pdesoft.cn         # 必填——远程地址中真实使用的 git 主机
+      - host: git.company.example    # 必填——远程地址中真实使用的 git 主机
         port: 9092                   # 可选
         user: git                    # 可选，默认 git
         sshKey: id_ed25519           # 可选，覆盖身份级密钥
-        alias: pde                   # 可选，SSH 别名
+        alias: work                  # 可选，SSH 别名
         sshHostName: ssh.example.com # 可选，实际拨号的端点
         alsoRoutes: [example.com]    # 可选，额外经由该别名路由的主机
 ```
@@ -48,7 +48,7 @@ identities:
 
 ```yaml
 rules:
-  - dir: D:/CODE/PDE-GIT
+  - dir: ~/code/company
     identity: work
     comment: 公司仓库        # 可选，仅用于显示
 ```
@@ -61,7 +61,7 @@ rules:
 
 ```yaml
 repositories:
-  - path: D:/CODE/github/old-corporate-repo
+  - path: ~/code/personal/legacy-corporate-tool
     identity: work
 ```
 

@@ -16,21 +16,21 @@ const PROFILE = (home: string) => `schemaVersion: 1
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
         alias: gh
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
-        alias: pde
+        alias: work
 rules:
   - dir: ${home}/code/personal
     identity: personal
@@ -108,8 +108,8 @@ test('git really resolves the identity from the directory', async () => {
     const personalEmail = await git(h.home, path.join(h.home, 'code', 'personal', 'repo'), ['config', 'user.email']);
     const workEmail = await git(h.home, path.join(h.home, 'code', 'work', 'repo'), ['config', 'user.email']);
 
-    assert.equal(personalEmail.trim(), 'zlj20@163.com');
-    assert.equal(workEmail.trim(), 'zhulj@pde.com.cn');
+    assert.equal(personalEmail.trim(), 'alex@personal.example');
+    assert.equal(workEmail.trim(), 'alex@company.example');
   } finally {
     await h.cleanup();
   }
@@ -124,7 +124,7 @@ test('a subdirectory of a repo inherits the directory rule', async () => {
     await mkdir(deep, { recursive: true });
     await initRepo(h.home, path.join(h.home, 'code', 'work', 'repo'));
 
-    assert.equal((await git(h.home, deep, ['config', 'user.email'])).trim(), 'zhulj@pde.com.cn');
+    assert.equal((await git(h.home, deep, ['config', 'user.email'])).trim(), 'alex@company.example');
   } finally {
     await h.cleanup();
   }
@@ -253,13 +253,13 @@ test('apply refuses to overwrite a file changed after planning', async () => {
 test('ssh config gets one Host per site with IdentitiesOnly yes', async () => {
   const { h, profiles } = await setup();
   try {
-    await h.write('.ssh/config', 'Host 192.168.12.60\n\tUser root\n');
+    await h.write('.ssh/config', 'Host 10.0.0.10\n\tUser root\n');
     await apply(await plan({ home: h.home, profiles }), { home: h.home });
     const text = await h.read('.ssh/config');
-    assert.ok(text.startsWith('Host 192.168.12.60\n\tUser root\n'), 'existing host preserved');
+    assert.ok(text.startsWith('Host 10.0.0.10\n\tUser root\n'), 'existing host preserved');
     const block = findBlock(text);
     assert.match(block.content, /Host gh[\s\S]*?HostName github\.com/);
-    assert.match(block.content, /Host pde[\s\S]*?Port 9092/);
+    assert.match(block.content, /Host work[\s\S]*?Port 9092/);
     assert.equal(block.content.match(/IdentitiesOnly yes/g)?.length, 2);
   } finally {
     await h.cleanup();

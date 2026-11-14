@@ -41,8 +41,8 @@ const BASE_PROFILE = `schemaVersion: 1
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
@@ -73,10 +73,10 @@ test('an identity can be added with a site', async () => {
       body: JSON.stringify({
         add: true,
         name: 'work',
-        userName: 'zhulj',
-        email: 'zhulj@pde.com.cn',
+        userName: 'Alex Chen',
+        email: 'alex@company.example',
         sshKey: 'id_ed25519',
-        host: 'git.pdesoft.cn',
+        host: 'git.company.example',
         port: '9092',
         alias: 'pde',
       }),
@@ -87,7 +87,7 @@ test('an identity can be added with a site', async () => {
 
     const added = body.identities.find((i) => i.name === 'work');
     assert.ok(added, 'the new identity is in the summary');
-    assert.equal(added.email, 'zhulj@pde.com.cn');
+    assert.equal(added.email, 'alex@company.example');
     assert.equal(added.sshKey, 'id_ed25519');
     assert.equal(added.sites.length, 1);
 
@@ -95,7 +95,7 @@ test('an identity can be added with a site', async () => {
     const profiles = await loadProfiles(home);
     assert.ok(profiles.identities.some((i) => i.name === 'work'));
     const site = profiles.sites.find((s) => s.identity === 'work');
-    assert.equal(site?.host, 'git.pdesoft.cn');
+    assert.equal(site?.host, 'git.company.example');
     assert.equal(site?.port, 9092);
   });
 });
@@ -183,16 +183,16 @@ test('an identity in use cannot be deleted without forcing', async () => {
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
         alias: gh
   gitlab:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
 rules:
   - dir: /code/github
     identity: personal
@@ -238,7 +238,7 @@ test('an identity can be edited in place', async () => {
         update: true,
         original: 'personal',
         name: 'personal',
-        userName: 'zlj20',
+        userName: 'alexchen',
         email: 'new@example.com',
         sshKey: 'id_other',
         host: 'github.com',
@@ -265,8 +265,8 @@ test('renaming an identity updates the rules that reference it', async () => {
         update: true,
         original: 'personal',
         name: 'home',
-        userName: 'zlj20',
-        email: 'zlj20@163.com',
+        userName: 'alexchen',
+        email: 'alex@personal.example',
         sshKey: 'id_ed25519_github',
         host: 'github.com',
       }),
@@ -307,8 +307,8 @@ test('renaming onto an existing name is rejected', async () => {
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
@@ -368,8 +368,8 @@ test('clearing the SSH key removes it', async () => {
         update: true,
         original: 'personal',
         name: 'personal',
-        userName: 'zlj20',
-        email: 'zlj20@163.com',
+        userName: 'alexchen',
+        email: 'alex@personal.example',
         sshKey: '',
         host: 'github.com',
       }),

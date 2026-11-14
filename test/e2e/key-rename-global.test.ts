@@ -21,7 +21,7 @@ const PROFILE = `schemaVersion: 1
 identities:
   work:
     user:
-      name: zhulj
+      name: Alex Chen
       email: work@example.com
     sshKey: id_old
     sites:
@@ -192,12 +192,12 @@ test('writeGlobalIdentity persists and reports the previous value', async () => 
 test('the global identity can be set through the API', async () => {
   await withServer(async ({ home, base, auth }) => {
     const post = poster(base, auth);
-    const res = await post('/api/global-identity', { name: 'zlj20', email: 'zlj20@163.com' });
+    const res = await post('/api/global-identity', { name: 'alexchen', email: 'alex@personal.example' });
     assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.equal(res.body.after, 'zlj20 <zlj20@163.com>');
+    assert.equal(res.body.after, 'alexchen <alex@personal.example>');
 
     const identity = await readGlobalIdentity(home);
-    assert.equal(identity?.email, 'zlj20@163.com');
+    assert.equal(identity?.email, 'alex@personal.example');
 
     // the managed block must still be present and untouched
     const text = await readFile(path.join(home, '.gitconfig'), 'utf8');

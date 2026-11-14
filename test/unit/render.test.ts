@@ -18,21 +18,21 @@ const PROFILE = `schemaVersion: 1
 identities:
   personal:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
         alias: gh
   work:
     user:
-      name: zhulj
-      email: zhulj@pde.com.cn
+      name: Alex Chen
+      email: alex@company.example
     sshKey: id_ed25519
     sites:
-      - host: git.pdesoft.cn
+      - host: git.company.example
         port: 9092
-        alias: pde
+        alias: work
 rules:
   - dir: ${HOME}/code/personal
     identity: personal
@@ -57,8 +57,8 @@ test('identity config carries user identity and alias routing', () => {
     aliasFor: () => [{ alias: 'gh', hosts: ['github.com'] }],
   });
   assert.match(body, /\[user\]/);
-  assert.match(body, /name = zlj20/);
-  assert.match(body, /email = zlj20@163\.com/);
+  assert.match(body, /name = alexchen/);
+  assert.match(body, /email = alex@personal.example/);
   assert.match(body, /\[url "git@gh:"\]/);
   assert.match(body, /insteadOf = git@github\.com:/);
   assert.match(body, /insteadOf = https:\/\/github\.com\//);
@@ -133,7 +133,7 @@ identities:
     sites:
       - host: git.company.com
         port: 9092
-        alias: pde
+        alias: work
 rules: []
 `);
   const body = renderIdentityConfig(profiles, 'work', { aliasFor: (n) => aliasesForIdentity(profiles, n) });
@@ -170,7 +170,7 @@ test('ssh hosts always carry IdentitiesOnly yes and the right key', () => {
   assert.equal(hosts.length, 2);
   const block = renderSshBlock(hosts);
   assert.match(block, /Host gh\n\tHostName github\.com\n\tUser git\n\tIdentityFile ~\/\.ssh\/id_ed25519_github\n\tIdentitiesOnly yes/);
-  assert.match(block, /Host pde\n\tHostName git\.pdesoft\.cn\n\tPort 9092\n\tUser git/);
+  assert.match(block, /Host work\n\tHostName git\.company\.example\n\tPort 9092\n\tUser git/);
   assert.equal(block.match(/IdentitiesOnly yes/g)?.length, 2);
 });
 

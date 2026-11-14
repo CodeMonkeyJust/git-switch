@@ -14,7 +14,7 @@ const HOME = '/home/tester';
 
 test('parseRemoteHost understands scp, ssh:// and https:// remotes', () => {
   assert.equal(parseRemoteHost('git@github.com:owner/repo.git'), 'github.com');
-  assert.equal(parseRemoteHost('ssh://git@git.pdesoft.cn:9092/PDES4.0/x.git'), 'git.pdesoft.cn');
+  assert.equal(parseRemoteHost('ssh://git@git.company.example:9092/group/x.git'), 'git.company.example');
   assert.equal(parseRemoteHost('https://gitee.com/jeecg/JeecgBoot.git'), 'gitee.com');
   assert.equal(parseRemoteHost('git://host/repo.git'), 'host');
   assert.equal(parseRemoteHost(''), undefined);
@@ -22,8 +22,8 @@ test('parseRemoteHost understands scp, ssh:// and https:// remotes', () => {
 
 test('parseSshConfig extracts hosts that pin an identity file', () => {
   const hosts = parseSshConfig(`
-Host 192.168.12.60
-  HostName 192.168.12.60
+Host 10.0.0.10
+  HostName 10.0.0.10
   User root
   ForwardAgent yes
 
@@ -110,15 +110,15 @@ test('sshKeyName strips the directory and .pub suffix', () => {
 
 test('buildProfiles merges alternate SSH endpoints into one identity', () => {
   const found: Discovery = {
-    gitUser: { name: 'zhulj', email: 'zhulj@pde.com.cn' },
+    gitUser: { name: 'Alex Chen', email: 'alex@company.example' },
     hosts: [
       { host: 'ssh.github.com', port: 443, user: 'git', identityFile: '~/.ssh/id_ed25519_github', aliases: ['github.com'] },
-      { host: 'git.pdesoft.cn', port: 9092, user: 'git', identityFile: '~/.ssh/id_ed25519', aliases: ['pdesoft'] },
+      { host: 'git.company.example', port: 9092, user: 'git', identityFile: '~/.ssh/id_ed25519', aliases: ['company'] },
     ],
     repos: [],
     groups: [
       { dir: `${HOME}/code/github`, count: 2, remoteHost: 'github.com' },
-      { dir: `${HOME}/code/PDE-GIT`, count: 1, remoteHost: 'git.pdesoft.cn' },
+      { dir: `${HOME}/code/company`, count: 1, remoteHost: 'git.company.example' },
     ],
     warnings: [],
   };
@@ -171,7 +171,7 @@ test('buildProfiles creates identities for remote hosts missing from ssh config'
 test('buildProfiles avoids absurd aliases for IP and generic hosts', () => {
   const found: Discovery = {
     hosts: [
-      { host: '192.168.12.60', user: 'root', identityFile: '~/.ssh/id_ed25519', aliases: ['192.168.12.60'] },
+      { host: '10.0.0.10', user: 'root', identityFile: '~/.ssh/id_ed25519', aliases: ['10.0.0.10'] },
       { host: 'ssh.gitlab.com', port: 443, identityFile: '~/.ssh/id_gl', aliases: ['gitlab.com'] },
     ],
     repos: [],

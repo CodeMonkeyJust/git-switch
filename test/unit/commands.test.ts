@@ -37,7 +37,7 @@ const PROFILE = (home: string) => `schemaVersion: 1
 identities:
   work:
     user:
-      name: zhulj
+      name: Alex Chen
       email: work@example.com
     sshKey: id_work
     sites:
@@ -45,7 +45,7 @@ identities:
         port: 9092
   personal:
     user:
-      name: zlj20
+      name: alexchen
       email: personal@example.com
     sshKey: id_gh
     sites:

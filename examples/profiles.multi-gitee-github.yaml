@@ -3,16 +3,18 @@ schemaVersion: 1
 identities:
   github:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_github
     sites:
       - host: github.com
+        port: 443
+        sshHostName: ssh.github.com   # GitHub's SSH-over-443 endpoint
         alias: gh
   gitee:
     user:
-      name: zlj20
-      email: zlj20@163.com
+      name: alexchen
+      email: alex@personal.example
     sshKey: id_ed25519_gitee
     sites:
       - host: gitee.com

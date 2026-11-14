@@ -52,6 +52,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The tab bar now follows the setup dependency chain**: Keys → Identities →
+  Rules → Preview. A key exists first, an identity uses it, a rule assigns a
+  directory to that identity, and only then is there anything to apply.
+- The Identities screen warns when no SSH key exists at all and offers a shortcut
+  to the Keys screen, instead of letting a user create an identity that cannot
+  route SSH. Creating a key now offers the reverse shortcut to Identities.
 - **Forms on the identity and rule screens follow the order a user thinks in,
   and every control has a visible label.** Identity: *Basic identity* → *SSH
   key* → *Site*; a rule: *Target directory* → *Assign to an identity*. Labels

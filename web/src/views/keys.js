@@ -92,6 +92,18 @@ function generateForm(container, app) {
             app.toast(t('web.keyGenerated', keyName));
             if (result.publicKey) container.append(notice('ok', result.publicKey));
             await renderKeys(container, app);
+            // the natural next step is to use the key for an identity
+            container.prepend(
+              el('div', { class: 'notice ok' }, [
+                el('span', { text: t('web.keyNextStep') }),
+                el('button', {
+                  class: 'primary',
+                  style: 'margin-left:12px',
+                  text: t('web.goToIdentities'),
+                  onclick: () => app.goto('identities'),
+                }),
+              ]),
+            );
           } catch (err) {
             error.textContent = err.message;
             error.className = 'notice error';

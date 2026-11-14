@@ -429,6 +429,11 @@ const en: Catalogue = {
   'web.ruleCount': '{0} rule(s)',
   'web.keyMissing': '(not found on disk)',
   'web.useThisDir': 'Use this directory',
+  'web.noKeysYet': 'No SSH keys exist yet. Create one first — an identity needs a key to route SSH.',
+  'web.goToKeys': 'Go to Keys',
+  'web.keyRequired': 'Create a key on the Keys screen first, then come back here.',
+  'web.keyNextStep': 'Key created. Add it to the forge, then use it in an identity.',
+  'web.goToIdentities': 'Go to Identities',
 
   // init screen
   'web.initTitle': 'Setup',
@@ -768,6 +773,11 @@ const zhCN: Catalogue = {
   'web.ruleCount': '{0} 条规则',
   'web.keyMissing': '（磁盘上不存在）',
   'web.useThisDir': '使用此目录',
+  'web.noKeysYet': '还没有任何 SSH 密钥。请先创建密钥——身份需要密钥才能生成 SSH 路由。',
+  'web.goToKeys': '前往密钥页',
+  'web.keyRequired': '请先在「密钥」页创建密钥，再回到这里。',
+  'web.keyNextStep': '密钥已创建。请把公钥添加到代码托管站点，然后在身份里使用它。',
+  'web.goToIdentities': '前往身份页',
 
   // init screen
   'web.initTitle': '初始化',

@@ -97,6 +97,56 @@ setMessages(ZH, 'zh-CN');
   check('dropdown starts on a placeholder', options[0]?.includes('请选择'), options.join('|'));
 }
 
+/* ---------------- tab order ---------------- */
+{
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile('web/index.html', 'utf8');
+  const order = [...html.matchAll(/data-view="([^"]+)"/g)].map((m) => m[1]);
+
+  // A key is a prerequisite for an identity, which is a prerequisite for a rule.
+  check(
+    'Keys comes before Identities in the tab bar',
+    order.indexOf('keys') < order.indexOf('identities'),
+    order.join(' > '),
+  );
+  check(
+    'Identities comes before Rules',
+    order.indexOf('identities') < order.indexOf('rules'),
+    order.join(' > '),
+  );
+  check(
+    'Rules comes before Preview (apply needs something to apply)',
+    order.indexOf('rules') < order.indexOf('preview'),
+    order.join(' > '),
+  );
+  check('every screen has a tab', ['overview', 'keys', 'identities', 'rules', 'preview', 'doctor', 'snapshot', 'init'].every((v) => order.includes(v)), order.join(' > '));
+}
+
+/* ---------------- missing-key guidance ---------------- */
+{
+  const dom = installDom();
+  fakeFetch({ '/api/state': { ...STATE, identities: [], rules: [] }, '/api/keys': { keys: [] } });
+  const { renderIdentities } = await import('../web/src/views/identities.js');
+  let went = null;
+  await renderIdentities(dom.main, {
+    state: undefined,
+    goto: (v) => {
+      went = v;
+    },
+    toast() {},
+  });
+
+  check(
+    'identities screen warns when no key exists',
+    dom.main.textContent.includes('还没有任何 SSH 密钥') || dom.main.textContent.includes('No SSH keys exist'),
+    dom.main.textContent.slice(0, 160),
+  );
+  const goButton = dom.main.querySelectorAll('button').find((b) => /前往密钥页|Go to Keys/.test(b.textContent));
+  check('it offers a shortcut to the Keys screen', Boolean(goButton));
+  goButton?.dispatchEvent({ type: 'click', target: goButton });
+  check('the shortcut navigates to keys', went === 'keys', String(went));
+}
+
 console.log('');
 if (failures.length > 0) {
   console.error(`${failures.length} check(s) failed`);

@@ -112,7 +112,29 @@ h3 { font-size: 14px; margin: 24px 0 8px; color: var(--muted); text-transform: u
 
 .row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .row:last-child { border-bottom: none; }
-.path { font-family: var(--mono); font-size: 13px; flex: 1; overflow-wrap: anywhere; }
+
+/*
+ * A flex child defaults to min-width:auto, so it refuses to shrink below its
+ * content width. Combined with overflow-wrap:anywhere that made long paths wrap
+ * one character per line. min-width:0 lets the path shrink and ellipsize instead.
+ */
+.path {
+  font-family: var(--mono);
+  font-size: 13px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* controls inside a .row keep their natural width instead of filling it */
+.row > select.input,
+.row > button { flex: 0 0 auto; }
+.row > select.input { width: auto; min-width: 140px; max-width: 220px; }
+
+/* inside a labelled field the control always fills the field */
+.field > .input { width: 100%; }
 
 select, button {
   font: inherit;
@@ -235,6 +257,12 @@ pre.diff .ctx { color: var(--muted); }
 }
 .card-actions { margin-top: 12px; display: flex; gap: 8px; }
 
-.kv { display: flex; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+.kv { display: flex; gap: 8px; font-size: 13px; margin-bottom: 4px; align-items: baseline; }
 .kv-label { color: var(--muted); min-width: 96px; flex: none; }
-.kv-value { color: var(--fg); overflow-wrap: anywhere; }
+/* min-width:0 so a long path truncates instead of wrapping per character */
+.kv-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}

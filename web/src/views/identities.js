@@ -18,6 +18,23 @@ export async function renderIdentities(container, app) {
   app.state = state;
   const keyNames = keyReport.keys.map((k) => k.name);
 
+  // A key is a prerequisite: an identity without one produces no SSH routing at
+  // all. Point the user at the Keys screen instead of letting them create a
+  // half-configured identity.
+  if (keyNames.length === 0) {
+    container.append(
+      el('div', { class: 'notice warn' }, [
+        el('span', { text: t('web.noKeysYet') }),
+        el('button', {
+          class: 'primary',
+          style: 'margin-left:12px',
+          text: t('web.goToKeys'),
+          onclick: () => app.goto('keys'),
+        }),
+      ]),
+    );
+  }
+
   const grid = el('div', { class: 'grid' });
   for (const identity of state.identities) {
     const rules = state.rules.filter((r) => r.identity === identity.name).length;

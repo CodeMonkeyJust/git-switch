@@ -10,14 +10,19 @@
 <div id="app">
   <header class="topbar">
     <div class="brand">gs</div>
+    <!--
+      Tab order follows the setup dependency chain: a key exists first, an
+      identity uses it, a rule assigns a directory to that identity, and only
+      then can anything be applied.
+    -->
     <nav class="tabs" role="tablist">
       <button class="tab" data-view="overview" role="tab">Overview</button>
+      <button class="tab" data-view="keys" role="tab">Keys</button>
       <button class="tab" data-view="identities" role="tab">Identities</button>
       <button class="tab" data-view="rules" role="tab">Rules</button>
-      <button class="tab" data-view="keys" role="tab">Keys</button>
-      <button class="tab" data-view="snapshot" role="tab">Migrate</button>
       <button class="tab" data-view="preview" role="tab">Preview</button>
       <button class="tab" data-view="doctor" role="tab">Diagnostics</button>
+      <button class="tab" data-view="snapshot" role="tab">Migrate</button>
       <button class="tab" data-view="init" role="tab">Setup</button>
     </nav>
     <select id="language" class="lang-picker" aria-label="Language"></select>

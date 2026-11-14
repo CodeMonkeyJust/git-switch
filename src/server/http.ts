@@ -18,7 +18,7 @@ import { plan } from '../core/plan.ts';
 import { apply } from '../core/apply.ts';
 import { runDoctor } from '../core/checks.ts';
 import { resolveIdentity, sitesFor, type Profiles } from '../core/model.ts';
-import { gsPaths, contractHome, normaliseRulePath, toPosix } from '../core/paths.ts';
+import { gsPaths, contractHome, normaliseRulePath, toPosix, readGlobalIdentity, formatIdentity } from '../core/paths.ts';
 import { unifiedDiff } from '../util/diff.ts';
 import { writeFileAtomic } from '../util/fs-atomic.ts';
 import { listKeys, generateKey, publicKeyFor, copyToClipboard } from '../core/keys.ts';
@@ -278,6 +278,8 @@ async function handleApi(
         language: getLanguage(),
         messages: webCatalogue(),
         profileExists: await profilesExist(ctx.home),
+        // the identity git uses for every directory without a rule
+        globalIdentity: formatIdentity(await readGlobalIdentity(ctx.home)) ?? null,
         ...profileSummary(ctx.home, profiles),
         ...(resolution
           ? { resolved: { identity: resolution.identity.name, reason: resolution.reason, detail: resolution.detail } }

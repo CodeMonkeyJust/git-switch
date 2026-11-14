@@ -74,6 +74,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`gs list` and the GUI overview now name the global identity.** "No matching
+  rule — falls back to the global identity" was not actionable without saying
+  *which* identity that is; a personal repository committing with a work address
+  is the exact failure this tool exists to prevent. The fallback identity is
+  printed right under the warning and summarised on the overview screen, and an
+  unset global identity is reported explicitly instead of staying silent.
 - **Identities can be edited in the GUI**, not just added and deleted. Every
   field is editable — name, commit name/email, SSH key, and the site's
   host/port/alias — and renaming an identity updates every rule, repository

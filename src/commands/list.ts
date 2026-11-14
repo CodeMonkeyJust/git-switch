@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { loadProfiles } from '../core/profiles.ts';
 import { resolveIdentity, sitesFor } from '../core/model.ts';
-import { gsPaths, contractHome, normaliseRulePath } from '../core/paths.ts';
+import { gsPaths, contractHome, normaliseRulePath, readGlobalIdentity, formatIdentity } from '../core/paths.ts';
 import type { Logger } from '../util/log.ts';
 import { t } from '../core/i18n.ts';
 
@@ -91,6 +91,21 @@ export async function listCommand(opts: ListOptions): Promise<number> {
   } else {
     logger.info(t('list.currentDir'));
     logger.warn(`  ${t('list.noRule', contract(cwd))}`);
+    // Say which identity it falls back TO: a personal repo committing with a work
+    // address is the exact failure this tool exists to prevent.
+    const globalIdentity = formatIdentity(await readGlobalIdentity(home));
+    if (globalIdentity) {
+      logger.warn(`  ${t('list.fallsBackTo', globalIdentity)}`);
+    } else {
+      logger.warn(`  ${t('list.fallsBackToUnset')}`);
+    }
+  }
+
+  // Always state the global identity: it applies to everything without a rule.
+  if (result.resolved) {
+    const globalIdentity = formatIdentity(await readGlobalIdentity(home));
+    logger.info(t('list.globalIdentity'));
+    logger.dim(`  ${globalIdentity ?? t('list.globalUnset')}`);
   }
 
   logger.dim(t('list.profile', contract(gsPaths(home).profiles)));

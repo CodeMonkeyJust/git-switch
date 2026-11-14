@@ -1,3 +1,5 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -115,6 +117,62 @@ export function gsPaths(home = homedir()): GsPaths {
     sshConfig: path.join(home, '.ssh', 'config'),
     globalGitConfig: path.join(home, '.gitconfig'),
   };
+}
+
+export interface GlobalIdentity {
+  name?: string;
+  email?: string;
+  /** `~/.gitconfig`, or the file the identity actually came from */
+  origin?: string;
+}
+
+/** `git` invoked without a shell, resolved once. */
+function runGit(args: string[], options: { env: NodeJS.ProcessEnv; timeout?: number; windowsHide?: boolean }) {
+  return promisify(execFile)('git', args, options);
+}
+
+/**
+ * Read the identity git falls back to outside every rule.
+ *
+ * `gs list` tells the user "no rule matched, this falls back to the global
+ * identity" — without saying *which* identity that is, the message is not
+ * actionable. A personal repo silently committing with a work address is exactly
+ * the failure mode this tool exists to prevent.
+ */
+export async function readGlobalIdentity(home = homedir()): Promise<GlobalIdentity | undefined> {
+  const env = { ...process.env, HOME: home, USERPROFILE: home, GIT_CONFIG_NOSYSTEM: '1' };
+  try {
+    const { stdout } = await runGit(['config', '--global', '--list'], {
+      env,
+      timeout: 5000,
+      windowsHide: true,
+    });
+    let name: string | undefined;
+    let email: string | undefined;
+    for (const line of stdout.split(/\r?\n/)) {
+      const index = line.indexOf('=');
+      if (index === -1) continue;
+      const key = line.slice(0, index).trim().toLowerCase();
+      const value = line.slice(index + 1).trim();
+      if (key === 'user.name' && value !== '') name = value;
+      if (key === 'user.email' && value !== '') email = value;
+    }
+    if (name === undefined && email === undefined) return undefined;
+    return {
+      ...(name !== undefined ? { name } : {}),
+      ...(email !== undefined ? { email } : {}),
+      origin: contractHome(path.join(home, '.gitconfig'), home),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** `zhulj <me@example.com>` or a partial value when only one half is set. */
+export function formatIdentity(identity: GlobalIdentity | undefined): string | undefined {
+  if (!identity) return undefined;
+  if (identity.name && identity.email) return `${identity.name} <${identity.email}>`;
+  return identity.name ?? identity.email;
 }
 
 /**

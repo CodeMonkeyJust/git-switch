@@ -52,4 +52,17 @@ export async function renderOverview(container, app) {
       el('button', { class: 'primary', text: t('web.openPreview'), onclick: () => app.goto('preview') }),
     ]),
   );
+
+  // Every directory without a rule uses this identity; without saying so, a
+  // personal repo committing with a work address is invisible here.
+  container.append(
+    el('h3', { text: t('web.globalIdentity') }),
+    el('div', { class: 'card' }, [
+      el('div', {
+        class: state.globalIdentity ? 'mono' : 'mono muted',
+        text: state.globalIdentity ?? t('web.globalUnset'),
+      }),
+      el('div', { class: 'muted', text: t('web.globalIdentityHint') }),
+    ]),
+  );
 }

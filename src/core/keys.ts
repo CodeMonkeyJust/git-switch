@@ -8,7 +8,7 @@
 
 import { spawn } from 'node:child_process';
 import { execFile } from 'node:child_process';
-import { mkdir, readdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { Profiles } from './model.ts';
@@ -151,6 +151,46 @@ export async function publicKeyFor(home: string, name: string): Promise<string> 
   // derive it when only the private key is present
   const { stdout } = await run('ssh-keygen', ['-y', '-f', file]);
   return stdout.trim();
+}
+
+export interface RenameOptions {
+  home: string;
+  from: string;
+  to: string;
+}
+
+/**
+ * Rename a key pair on disk.
+ *
+ * A private key's `.pub` companion must follow it, and every identity or site in
+ * the profile that references the old name has to be rewritten by the caller —
+ * this function only moves files and reports what it did.
+ */
+export async function renameKey(opts: RenameOptions): Promise<{ from: string; to: string; moved: string[] }> {
+  const { home, from, to } = opts;
+  if (!KEY_NAME.test(from) || !KEY_NAME.test(to)) {
+    throw new Error('key names may contain only letters, digits, dot, dash and underscore');
+  }
+  if (from === to) throw new Error('the new name is identical to the old one');
+
+  const dir = path.join(home, '.ssh');
+  const source = path.join(dir, from);
+  const target = path.join(dir, to);
+
+  if (!(await exists(source))) throw new Error(`${from} does not exist in ~/.ssh`);
+  if (await exists(target)) throw new Error(`${to} already exists in ~/.ssh`);
+
+  const moved: string[] = [];
+  await rename(source, target);
+  moved.push(to);
+
+  const sourcePub = `${source}.pub`;
+  if (await exists(sourcePub)) {
+    await rename(sourcePub, `${target}.pub`);
+    moved.push(`${to}.pub`);
+  }
+
+  return { from, to, moved };
 }
 
 /** Best-effort clipboard copy across platforms. */

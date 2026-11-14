@@ -372,6 +372,17 @@ const en: Catalogue = {
   'web.restoreConfirm': 'Write the keys from this snapshot into ~/.ssh? Existing files are kept.',
   'web.keysRestored': '{0} key file(s) restored',
   'web.keysSkipped': '{0} existing file(s) kept',
+  'web.renameKey': 'Rename',
+  'web.renameKeyTitle': 'Rename key',
+  'web.newKeyName': 'New name',
+  'web.renameConfirm': 'Rename "{0}" to "{1}"? Identities using it will be updated.',
+  'web.keyRenamed': 'Renamed "{0}" to "{1}"',
+  'web.keyRenamedIdentities': '{0} identity reference(s) updated',
+  'web.globalIdentityTitle': 'Global identity',
+  'web.globalIdentityFormHint':
+    'Applies to every directory no rule matches. Stored in ~/.gitconfig, outside the gs managed block.',
+  'web.globalIdentitySaved': 'Global identity set to {0}',
+  'web.globalIdentityWas': 'Previous value: {0}',
 
   // snapshot screen
   'web.snapshotTitle': 'Migrate',
@@ -723,6 +734,16 @@ const zhCN: Catalogue = {
   'web.restoreConfirm': '将快照中的密钥写入 ~/.ssh？已存在的文件会保留。',
   'web.keysRestored': '已恢复 {0} 个密钥文件',
   'web.keysSkipped': '保留了 {0} 个已存在的文件',
+  'web.renameKey': '重命名',
+  'web.renameKeyTitle': '重命名密钥',
+  'web.newKeyName': '新名称',
+  'web.renameConfirm': '确定把「{0}」重命名为「{1}」？使用它的身份会一并更新。',
+  'web.keyRenamed': '已将「{0}」重命名为「{1}」',
+  'web.keyRenamedIdentities': '已更新 {0} 处身份引用',
+  'web.globalIdentityTitle': '全局身份',
+  'web.globalIdentityFormHint': '所有没有匹配规则的目录都会使用它。它保存在 ~/.gitconfig，不在 gs 托管块内。',
+  'web.globalIdentitySaved': '全局身份已设置为 {0}',
+  'web.globalIdentityWas': '原值：{0}',
 
   // snapshot screen
   'web.snapshotTitle': '迁移',

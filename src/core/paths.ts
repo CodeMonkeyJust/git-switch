@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { readFileIfExists, writeFileAtomic } from '../util/fs-atomic.ts';
 
 /**
  * Cross-platform path helpers.
@@ -173,6 +174,89 @@ export function formatIdentity(identity: GlobalIdentity | undefined): string | u
   if (!identity) return undefined;
   if (identity.name && identity.email) return `${identity.name} <${identity.email}>`;
   return identity.name ?? identity.email;
+}
+
+/**
+ * Write `user.name` / `user.email` into ~/.gitconfig.
+ *
+ * The global identity lives outside the gs managed block, so this edits the file
+ * directly rather than going through `apply`. Everything else in the file —
+ * comments, sections, the managed block itself — is preserved: only the `[user]`
+ * section's two keys are rewritten, and the section is created when absent.
+ *
+ * Returns the previous values so the caller can show a diff and offer a rollback.
+ */
+export async function writeGlobalIdentity(
+  home: string,
+  values: { name?: string | undefined; email?: string | undefined },
+): Promise<{ before: GlobalIdentity | undefined; file: string }> {
+  const file = path.join(home, '.gitconfig');
+  const before = await readGlobalIdentity(home);
+  const original = (await readFileIfExists(file)) ?? '';
+  const eol = original.includes('\r\n') ? '\r\n' : '\n';
+
+  const updated = setUserSection(original, values, eol);
+  await writeFileAtomic(file, updated);
+  return { before, file };
+}
+
+/**
+ * Replace or insert `name` / `email` inside the `[user]` section.
+ * A `user.name = …` line inside another section is not touched because sections
+ * are tracked while scanning.
+ */
+export function setUserSection(
+  text: string,
+  values: { name?: string | undefined; email?: string | undefined },
+  eol = '\n',
+): string {
+  const lines = text === '' ? [] : text.split(/\r?\n/);
+  const wanted: [string, string | undefined][] = [
+    ['name', values.name],
+    ['email', values.email],
+  ];
+
+  // locate the [user] section
+  let sectionStart = -1;
+  let sectionEnd = lines.length;
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] ?? '').trim();
+    if (!line.startsWith('[')) continue;
+    if (sectionStart !== -1) {
+      sectionEnd = i;
+      break;
+    }
+    if (/^\[\s*user\s*\]$/i.test(line)) sectionStart = i;
+  }
+
+  if (sectionStart === -1) {
+    // append a new section, keeping the file's trailing newline convention
+    const block = ['[user]'];
+    for (const [key, value] of wanted) {
+      if (value !== undefined) block.push(`\t${key} = ${value}`);
+    }
+    const merged = lines.length === 0 ? block : [...lines, '', ...block];
+    return merged.join(eol) + eol;
+  }
+
+  const section = lines.slice(sectionStart + 1, sectionEnd);
+  const handled = new Set<string>();
+  const rewritten = section.map((line) => {
+    const match = /^(\s*)(name|email)(\s*=).*$/i.exec(line);
+    if (!match) return line;
+    const key = (match[2] ?? '').toLowerCase();
+    const value = key === 'name' ? values.name : values.email;
+    if (value === undefined) return line; // leave untouched
+    handled.add(key);
+    return `${match[1]}${key}${match[3]} ${value}`;
+  });
+
+  for (const [key, value] of wanted) {
+    if (value !== undefined && !handled.has(key)) rewritten.push(`\t${key} = ${value}`);
+  }
+
+  const merged = [...lines.slice(0, sectionStart + 1), ...rewritten, ...lines.slice(sectionEnd)];
+  return merged.join(eol);
 }
 
 /**

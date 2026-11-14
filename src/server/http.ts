@@ -18,10 +18,10 @@ import { plan } from '../core/plan.ts';
 import { apply } from '../core/apply.ts';
 import { runDoctor } from '../core/checks.ts';
 import { resolveIdentity, sitesFor, type Profiles } from '../core/model.ts';
-import { gsPaths, contractHome, normaliseRulePath, toPosix, readGlobalIdentity, formatIdentity } from '../core/paths.ts';
+import { gsPaths, contractHome, normaliseRulePath, toPosix, readGlobalIdentity, formatIdentity, writeGlobalIdentity } from '../core/paths.ts';
 import { unifiedDiff } from '../util/diff.ts';
 import { writeFileAtomic } from '../util/fs-atomic.ts';
-import { listKeys, generateKey, publicKeyFor, copyToClipboard } from '../core/keys.ts';
+import { listKeys, generateKey, publicKeyFor, copyToClipboard, renameKey } from '../core/keys.ts';
 import { keysFromSnapshot, restoreKeys, readSnapshotFile } from '../core/key-restore.ts';
 import {
   buildSnapshot,
@@ -591,7 +591,7 @@ async function handleApi(
     }
 
     if (url.pathname === '/api/keys' && method === 'POST') {
-      const body = (await readBody(req)) as { action?: string; name?: string; comment?: string; snapshot?: string; force?: boolean } | undefined;
+      const body = (await readBody(req)) as { action?: string; name?: string; newName?: string; comment?: string; snapshot?: string; force?: boolean } | undefined;
       const action = body?.action;
 
       if (action === 'copy') {
@@ -666,7 +666,67 @@ async function handleApi(
         return;
       }
 
-      sendJson(res, 400, { error: 'expected {action: copy|generate|restore}' });
+      if (action === 'rename') {
+        const from = (body?.name ?? '').trim();
+        const to = (body?.newName ?? '').trim();
+        if (from === '' || to === '') {
+          sendJson(res, 400, { error: 'both the current and the new name are required' });
+          return;
+        }
+        try {
+          const result = await renameKey({ home: ctx.home, from, to });
+          // rewrite every reference in the profile so it keeps loading
+          const profiles = await loadProfiles(ctx.home);
+          let touched = 0;
+          for (const identity of profiles.identities) {
+            if (identity.sshKey === from) {
+              identity.sshKey = to;
+              touched += 1;
+            }
+          }
+          for (const site of profiles.sites) {
+            if (site.sshKey === from) {
+              site.sshKey = to;
+              touched += 1;
+            }
+          }
+          if (touched > 0) await saveProfiles(ctx.home, profiles);
+          sendJson(res, 200, { ...result, identitiesUpdated: touched });
+        } catch (err) {
+          sendJson(res, 400, { error: (err as Error).message });
+        }
+        return;
+      }
+
+      sendJson(res, 400, { error: 'expected {action: copy|generate|restore|rename}' });
+      return;
+    }
+
+    /* ---------------- global identity ---------------- */
+
+    if (url.pathname === '/api/global-identity' && method === 'POST') {
+      const body = (await readBody(req)) as { name?: string; email?: string } | undefined;
+      const name = (body?.name ?? '').trim();
+      const email = (body?.email ?? '').trim();
+
+      const problems: string[] = [];
+      if (name === '') problems.push(`${t('web.field.userName')}: ${t('web.required')}`);
+      if (email === '') problems.push(`${t('web.field.email')}: ${t('web.required')}`);
+      if (email !== '' && !/^[^\s@]+@[^\s@]+$/.test(email)) {
+        problems.push(`${t('web.field.email')}: ${t('web.invalidEmail')}`);
+      }
+      if (problems.length > 0) {
+        sendJson(res, 400, { error: t('web.invalidIdentity', problems.join('; ')), problems });
+        return;
+      }
+
+      // the global identity lives outside the managed block, so this writes
+      // ~/.gitconfig directly instead of going through apply
+      const { before } = await writeGlobalIdentity(ctx.home, { name, email });
+      sendJson(res, 200, {
+        before: formatIdentity(before) ?? null,
+        after: `${name} <${email}>`,
+      });
       return;
     }
 

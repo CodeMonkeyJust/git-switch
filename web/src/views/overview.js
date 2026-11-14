@@ -64,5 +64,74 @@ export async function renderOverview(container, app) {
       }),
       el('div', { class: 'muted', text: t('web.globalIdentityHint') }),
     ]),
+    globalIdentityForm(container, app, state),
   );
+}
+
+/** Edit ~/.gitconfig's user identity directly: it lives outside the gs block. */
+function globalIdentityForm(container, app, state) {
+  const card = el('div', { class: 'card' });
+  const error = el('div', { class: 'form-error', text: '' });
+
+  // prefill from the current value: "name <email>" or a bare value
+  const current = state.globalIdentity ?? '';
+  const match = /^(.*?)\s*<([^>]+)>\s*$/.exec(current);
+  const currentName = match ? (match[1] ?? '').trim() : current.trim();
+  const currentEmail = match ? (match[2] ?? '').trim() : '';
+
+  const nameInput = el('input', {
+    type: 'text',
+    class: 'input',
+    value: currentName,
+    placeholder: 'zhulj',
+  });
+  const emailInput = el('input', {
+    type: 'text',
+    class: 'input',
+    value: currentEmail,
+    placeholder: 'you@example.com',
+  });
+
+  const save = el('button', {
+    class: 'primary',
+    text: t('web.save'),
+    onclick: async () => {
+      error.textContent = '';
+      try {
+        const result = await api.setGlobalIdentity({
+          name: nameInput.value.trim(),
+          email: emailInput.value.trim(),
+        });
+        app.toast(t('web.globalIdentitySaved', result.after));
+        if (result.before) app.toast(t('web.globalIdentityWas', result.before));
+        await renderOverview(container, app);
+      } catch (err) {
+        error.textContent = err.message;
+      }
+    },
+  });
+
+  card.append(
+    el('fieldset', { class: 'field-group' }, [
+      el('legend', { text: t('web.globalIdentityTitle') }),
+      el('label', { class: 'field' }, [
+        el('span', { class: 'field-label' }, [
+          t('web.field.userName'),
+          el('span', { class: 'req', text: ' *' }),
+        ]),
+        nameInput,
+      ]),
+      el('label', { class: 'field' }, [
+        el('span', { class: 'field-label' }, [
+          t('web.field.email'),
+          el('span', { class: 'req', text: ' *' }),
+        ]),
+        emailInput,
+      ]),
+    ]),
+    el('div', { class: 'muted', text: t('web.globalIdentityFormHint') }),
+    el('div', { class: 'form-actions' }, [save]),
+    error,
+  );
+  return card;
 }

@@ -94,6 +94,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ action: 'restore', snapshot, passphrase }),
     }),
+  renameKey: (name, newName) =>
+    request('/api/keys', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'rename', name, newName }),
+    }),
+
+  // global identity (~/.gitconfig, outside the managed block)
+  setGlobalIdentity: ({ name, email }) =>
+    request('/api/global-identity', {
+      method: 'POST',
+      body: JSON.stringify({ name, email }),
+    }),
 
   // snapshots
   exportSnapshot: ({ path, withKeys, passphrase }) =>

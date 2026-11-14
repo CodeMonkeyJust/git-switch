@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { t } from '../i18n.js';
 
 /**
- * SSH key management, mirroring `gs key list|gen|copy|restore`.
+ * SSH key management, mirroring `gs key list|gen|copy|restore`, plus renaming.
  *
  * Private key material never reaches the browser: the server returns names,
  * fingerprints and owning identities only. Copying a public key uses the
@@ -45,6 +45,18 @@ export async function renderKeys(container, app) {
                 },
               })
             : el('span', { class: 'muted', text: t('web.keyNoPublic') }),
+          el('button', {
+            text: t('web.renameKey'),
+            onclick: (event) => {
+              const row = event.target.closest('.row');
+              const panel = row.querySelector('.rename-panel');
+              if (panel) {
+                panel.remove();
+                return;
+              }
+              row.append(renamePanel(container, app, key));
+            },
+          }),
         ]),
       );
     }
@@ -53,6 +65,55 @@ export async function renderKeys(container, app) {
 
   container.append(el('h3', { text: t('web.generateKeyTitle') }), generateForm(container, app));
   container.append(el('h3', { text: t('web.restoreTitle') }), restoreForm(container, app));
+}
+
+/** Inline rename form shown under a key row. */
+function renamePanel(container, app, key) {
+  const panel = el('div', { class: 'rename-panel form-actions' });
+  const error = el('div', { class: 'form-error', text: '' });
+
+  const newName = el('input', {
+    type: 'text',
+    class: 'input',
+    value: key.name,
+    placeholder: t('web.newKeyName'),
+    style: 'max-width:280px',
+  });
+
+  const submit = el('button', {
+    class: 'primary',
+    text: t('web.renameKey'),
+    onclick: async () => {
+      const to = newName.value.trim();
+      error.textContent = '';
+      if (to === '' || to === key.name) {
+        error.textContent = t('web.newKeyName') + ': ' + t('web.required');
+        return;
+      }
+      // renaming moves files on disk: confirm before doing it
+      if (!confirm(t('web.renameConfirm', key.name, to))) return;
+      try {
+        const result = await api.renameKey(key.name, to);
+        app.toast(t('web.keyRenamed', key.name, to));
+        if (result.identitiesUpdated > 0) {
+          app.toast(t('web.keyRenamedIdentities', result.identitiesUpdated));
+        }
+        await renderKeys(container, app);
+      } catch (err) {
+        error.textContent = err.message;
+      }
+    },
+  });
+
+  panel.append(
+    el('label', { class: 'field' }, [
+      el('span', { class: 'field-label', text: t('web.newKeyName') }),
+      newName,
+    ]),
+    submit,
+    error,
+  );
+  return panel;
 }
 
 function input(placeholder, style = '') {
@@ -69,7 +130,7 @@ function generateForm(container, app) {
   const card = el('div', { class: 'card' });
   const name = input('id_ed25519_work');
   const comment = input('you@example.com');
-  const error = el('div', { class: 'muted', text: '' });
+  const error = el('div', { class: 'form-error', text: '' });
 
   card.append(
     el('div', { class: 'row' }, [
@@ -106,7 +167,6 @@ function generateForm(container, app) {
             );
           } catch (err) {
             error.textContent = err.message;
-            error.className = 'notice error';
           }
         },
       }),
@@ -126,7 +186,7 @@ function restoreForm(container, app) {
       'font-family:var(--mono);padding:6px 10px;border:1px solid var(--border);' +
       'border-radius:6px;background:var(--bg);color:var(--fg)',
   });
-  const error = el('div', { class: 'muted', text: '' });
+  const error = el('div', { class: 'form-error', text: '' });
 
   card.append(
     el('div', { class: 'row' }, [
@@ -150,7 +210,6 @@ function restoreForm(container, app) {
             await renderKeys(container, app);
           } catch (err) {
             error.textContent = err.message;
-            error.className = 'notice error';
           }
         },
       }),

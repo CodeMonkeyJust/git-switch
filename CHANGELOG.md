@@ -74,6 +74,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Renaming an SSH key.** The Keys screen can rename a key pair on disk; the
+  `.pub` companion follows, and every identity or site that referenced the old
+  name is rewritten so the profile keeps loading. An existing target, an invalid
+  name and a missing source are all refused without touching anything.
+- **Setting the global identity.** The overview screen can write `user.name` /
+  `user.email` into `~/.gitconfig`. That identity lives *outside* the gs managed
+  block, so it is edited directly rather than through `apply` — but only the two
+  keys inside `[user]` change: comments, other sections and the managed block are
+  preserved, and the previous value is reported back.
 - **`gs list` and the GUI overview now name the global identity.** "No matching
   rule — falls back to the global identity" was not actionable without saying
   *which* identity that is; a personal repository committing with a work address

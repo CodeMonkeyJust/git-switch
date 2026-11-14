@@ -151,6 +151,10 @@ function identityEditor(container, app, identity, site, keyNames) {
   const host = textInput(site?.host ?? '', t('web.hostHint'));
   const port = textInput(site?.port ?? '', t('web.portHint'));
   const alias = textInput(site?.alias ?? '', t('web.aliasHint'));
+  // The SSH endpoint is often not the Git host. github.com reaches SSH through
+  // ssh.github.com:443, and omitting this silently broke pushes.
+  const sshHostName = textInput(site?.sshHostName ?? '', 'ssh.github.com');
+  const siteUser = textInput(site?.user ?? '', 'git');
 
   const save = el('button', {
     class: 'primary',
@@ -166,6 +170,8 @@ function identityEditor(container, app, identity, site, keyNames) {
           sshKey: sshKey.value.trim(),
           host: host.value.trim(),
           port: port.value.trim(),
+          sshHostName: sshHostName.value.trim(),
+          user: siteUser.value.trim(),
           alias: alias.value.trim(),
         });
         app.toast(t('web.identityUpdated', name.value.trim()));
@@ -188,6 +194,8 @@ function identityEditor(container, app, identity, site, keyNames) {
     group(t('web.section.site'), [
       field(t('web.field.siteHost'), host, t('web.hostHint')),
       field(t('web.field.sitePort'), port, t('web.portHint')),
+      field(t('web.field.sshHostName'), sshHostName, t('web.sshHostNameHint')),
+      field(t('web.field.siteUser'), siteUser, t('web.siteUserHint')),
       field(t('web.field.siteAlias'), alias, t('web.aliasHint')),
     ]),
     el('div', { class: 'muted', text: t('web.editHint') }),
@@ -208,6 +216,8 @@ function identityForm(container, app, keyNames) {
   const host = textInput('', t('web.hostHint'));
   const port = textInput('', t('web.portHint'));
   const alias = textInput('', t('web.aliasHint'));
+  const sshHostName = textInput('', 'ssh.github.com');
+  const siteUser = textInput('', 'git');
 
   const submit = el('button', {
     class: 'primary',
@@ -222,6 +232,8 @@ function identityForm(container, app, keyNames) {
           sshKey: sshKey.value.trim(),
           host: host.value.trim(),
           port: port.value.trim(),
+          sshHostName: sshHostName.value.trim(),
+          user: siteUser.value.trim(),
           alias: alias.value.trim(),
         });
         app.toast(t('web.identityAdded', name.value.trim()));
@@ -244,6 +256,8 @@ function identityForm(container, app, keyNames) {
     group(t('web.section.site'), [
       field(t('web.field.siteHost'), host, t('web.hostHint')),
       field(t('web.field.sitePort'), port, t('web.portHint')),
+      field(t('web.field.sshHostName'), sshHostName, t('web.sshHostNameHint')),
+      field(t('web.field.siteUser'), siteUser, t('web.siteUserHint')),
       field(t('web.field.siteAlias'), alias, t('web.aliasHint')),
     ]),
     el('div', { class: 'form-actions' }, [submit]),

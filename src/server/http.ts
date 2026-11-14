@@ -39,6 +39,13 @@ import { buildProfiles } from '../commands/init.ts';
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 /**
+ * A bare hostname — no scheme, no port, no path.
+ * Mirrors the validator in core/model.ts so the API rejects the same input the
+ * loader would, and the message points at the right field.
+ */
+const HOST_NAME = /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/;
+
+/**
  * Locate the static assets.
  *
  * Three layouts must work:
@@ -396,6 +403,9 @@ async function handleApi(
             host?: string;
             port?: number | string | null;
             alias?: string | null;
+            user?: string;
+            sshHostName?: string;
+            alsoRoutes?: string;
           }
         | undefined;
       const remove = url.searchParams.get('remove');
@@ -489,7 +499,10 @@ async function handleApi(
           for (const site of profiles.sites) if (site.identity === original) site.identity = name;
         }
 
-        // The site is replaced wholesale: an empty host removes it.
+        // Rebuild the site from the form, but preserve every field the form does
+        // not expose. Dropping them silently is how `sshHostName` (github.com via
+        // ssh.github.com) got lost and broke pushes.
+        const previousSite = profiles.sites.find((s) => s.identity === original);
         const host = (body.host ?? '').trim();
         profiles.sites = profiles.sites.filter((s) => s.identity !== name);
         if (host !== '') {
@@ -504,8 +517,48 @@ async function handleApi(
           }
           const site: (typeof profiles.sites)[number] = { host, identity: name };
           if (port !== undefined) site.port = port;
+
           const alias = (body.alias ?? '').trim();
           if (alias !== '') site.alias = alias;
+
+          // fields the form may send explicitly
+          const user = (body.user ?? '').trim();
+          if (user !== '') site.user = user;
+
+          const sshHostName = (body.sshHostName ?? '').trim();
+          if (sshHostName !== '') {
+            if (!HOST_NAME.test(sshHostName)) {
+              sendJson(res, 400, { error: t('web.invalidHostName', sshHostName) });
+              return;
+            }
+            site.sshHostName = sshHostName;
+          }
+
+          const alsoRoutes = (body.alsoRoutes ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s !== '');
+          if (alsoRoutes.length > 0) {
+            for (const extra of alsoRoutes) {
+              if (!HOST_NAME.test(extra)) {
+                sendJson(res, 400, { error: t('web.invalidHostName', extra) });
+                return;
+              }
+            }
+            site.alsoRoutes = alsoRoutes;
+          }
+
+          // ...and keep anything the form never mentions
+          if (previousSite) {
+            if (site.user === undefined && previousSite.user !== undefined) site.user = previousSite.user;
+            if (site.sshHostName === undefined && previousSite.sshHostName !== undefined) {
+              site.sshHostName = previousSite.sshHostName;
+            }
+            if (site.alsoRoutes === undefined && previousSite.alsoRoutes !== undefined) {
+              site.alsoRoutes = previousSite.alsoRoutes;
+            }
+            if (site.sshKey === undefined && previousSite.sshKey !== undefined) site.sshKey = previousSite.sshKey;
+          }
           profiles.sites.push(site);
         }
 
@@ -569,6 +622,34 @@ async function handleApi(
           if (port !== undefined) site.port = port;
           const alias = (body.alias ?? '').trim();
           if (alias !== '') site.alias = alias;
+
+          const user = (body.user ?? '').trim();
+          if (user !== '') site.user = user;
+
+          const sshHostName = (body.sshHostName ?? '').trim();
+          if (sshHostName !== '') {
+            if (!HOST_NAME.test(sshHostName)) {
+              profiles.identities = profiles.identities.filter((i) => i.name !== name);
+              sendJson(res, 400, { error: t('web.invalidHostName', sshHostName) });
+              return;
+            }
+            site.sshHostName = sshHostName;
+          }
+
+          const alsoRoutes = (body.alsoRoutes ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s !== '');
+          if (alsoRoutes.length > 0) {
+            for (const extra of alsoRoutes) {
+              if (!HOST_NAME.test(extra)) {
+                profiles.identities = profiles.identities.filter((i) => i.name !== name);
+                sendJson(res, 400, { error: t('web.invalidHostName', extra) });
+                return;
+              }
+            }
+            site.alsoRoutes = alsoRoutes;
+          }
           profiles.sites.push(site);
         }
 

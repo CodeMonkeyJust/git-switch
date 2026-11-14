@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Editing an identity silently dropped `sshHostName`, which broke `git push`
+  to GitHub.** The editor rebuilt the site from the fields it showed, so a site
+  configured as `github.com` via `ssh.github.com:443` lost the endpoint and became
+  `HostName github.com` + `Port 443`. That endpoint *authenticates* (`ssh -T`
+  succeeds) but drops the connection as soon as git requests a pack, producing a
+  confusing `Connection closed by … port 443`. Now:
+  - fields the form does not show (`user`, `sshHostName`, `alsoRoutes`, `sshKey`)
+    are preserved on every edit;
+  - the form exposes *SSH hostname* and *SSH user* explicitly;
+  - a URL in *SSH hostname* is rejected instead of stored.
 - **One invalid field no longer blanks the whole GUI.** A site host pasted as a
   URL (`http://host:9090/`) made `loadProfiles` throw, `/api/state` answered 400,
   and every screen rendered empty with no explanation — and `gs gui` refused to

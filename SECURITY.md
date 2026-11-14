@@ -1,5 +1,7 @@
 # Security Policy
 
+[中文说明](SECURITY.zh-CN.md)
+
 ## Supported versions
 
 | Version | Supported |

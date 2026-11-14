@@ -104,6 +104,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Every user-facing document now exists in both English and Simplified
+  Chinese**, and each pair links to its counterpart: `README`, `CONTRIBUTING`,
+  `SECURITY`, `docs/architecture` and `docs/profiles-schema`. The Chinese README
+  had drifted far behind — it was missing the command table, the whole `gs gui`
+  section, the `doctor` output sample and the technical-choices section.
+- `npm run check:docs` keeps the pairs honest: same heading structure, same number
+  of code blocks, real Chinese content rather than an English stub, and a working
+  link in both directions.
 - **An invalid profile can be repaired from the GUI.** Showing the error was not
   enough — the user opened a GUI to avoid editing YAML. The error banner now
   offers *Fix it for me*: the common mistakes (a URL pasted into `host`, a

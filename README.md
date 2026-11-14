@@ -36,6 +36,7 @@ Multi-account Git setups usually break in three places:
 - **Detects concurrent edits** — refuses to overwrite files changed after planning
 - **Secrets never stored** — `profiles.yaml` validation rejects passwords, tokens and private keys
 - **Zero runtime dependencies** — plain Node, no `node_modules`
+- **Bilingual** — the CLI and the GUI both follow the system language (English / 简体中文)
 
 ---
 
@@ -53,14 +54,6 @@ gs init
 
 # 3. build once with the TypeScript compiler, then use the launcher
 npm install && npm run build && node dist/gs.mjs init
-```
-
-Then:
-
-```bash
-gs diff     # preview every change
-gs apply    # write managed blocks, with backups
-gs list     # what applies to the current directory
 ```
 
 > `dist/` holds **compiled JavaScript**, not TypeScript sources: Node refuses to
@@ -117,6 +110,8 @@ identities:
     sshKey: id_ed25519_github
     sites:
       - host: github.com
+        port: 443
+        sshHostName: ssh.github.com    # when the SSH endpoint differs from the host
         alias: gh
 
 rules:
@@ -128,6 +123,11 @@ rules:
 settings:
   backupKeep: 20
 ```
+
+> **About `sshHostName`**: `host` is the Git host that appears in
+> `git@github.com:…`; `sshHostName` is the endpoint actually dialled. GitHub needs
+> it to reach SSH through `ssh.github.com:443`. Swapping the two produces a
+> connection that authenticates and then drops as soon as git asks for a pack.
 
 Then:
 
@@ -151,10 +151,12 @@ gs apply    # write managed blocks, with backups
 | `gs key list` | SSH keys with fingerprints and the identities using them |
 | `gs key gen <name>` | Create an ed25519 key pair; public key goes to the clipboard |
 | `gs key copy <name>` | Copy a public key to the clipboard |
+| `gs key restore <snapshot> [--force]` | Write the keys from a snapshot back into `~/.ssh` |
 | `gs snapshot export <file> [--with-keys] [--force]` | Write a portable snapshot |
 | `gs snapshot import <file> [--remap OLD=NEW] [--force]` | Restore a profile on another machine |
 
-Global options: `--home <dir>` (use an alternative home), `--json`, `--no-color`.
+Global options: `--home <dir>` (use an alternative home), `--json`, `--no-color`,
+`--lang <en|zh-CN>`.
 
 Exit codes: `0` ok · `1` warning · `2` error.
 
@@ -186,10 +188,13 @@ Notes:
 
 ### `gs gui`
 
-A four-screen local web UI: **Overview** (identities and their sites),
+An eight-screen local web UI, ordered by the setup dependency chain: **Overview**
+(identities, their sites, and the global identity — editable there), **Keys**
+(list, copy, generate, rename, restore), **Identities** (add, edit, delete),
 **Rules** (directory → identity matrix with a server-side directory picker),
-**Preview** (the only screen that writes, always shows the diff first) and
-**Diagnostics** (the `gs doctor` checks with a re-run button).
+**Preview** (the only screen that writes, always shows the diff first),
+**Diagnostics** (the `gs doctor` checks with a re-run button), **Migrate**
+(snapshot export/import) and **Setup** (first-run wizard).
 
 ```bash
 gs gui          # prints http://127.0.0.1:<port>/#token=… and opens it
@@ -263,6 +268,12 @@ Generated `~/.gitconfig` block:
 > repository. Directories configured as rules must contain Git repositories for
 > the mapping to take effect — which is exactly how you work.
 
+> **The global identity:** a directory no rule matches falls back to
+> `user.name` / `user.email` in `~/.gitconfig`. That value is **not** inside the
+> managed block, so `gs list` and the overview screen always name it — a personal
+> repository committing with a work address is the exact failure this tool exists
+> to prevent.
+
 ---
 
 ## Safety Model
@@ -275,8 +286,9 @@ Generated `~/.gitconfig` block:
 | Concurrency | Refuses to write files changed after planning (`--force` overrides) |
 | Markers | Duplicate or orphaned markers abort instead of guessing |
 | Secrets | `profiles.yaml` may never contain passwords, tokens or private keys |
-| Malformed config | Rejected with a line number or field path, never silently ignored |
+| Malformed config | Rejected with a line number or field path, never silently ignored; the UI stays usable and can repair common mistakes in one click |
 | Write failures | Reported per file with the real target name and cause; the other files still apply; no temp files leak |
+| GUI writes | Identity/rule/snapshot edits only touch `profiles.yaml`; a confirmed Preview is required before anything reaches your system config |
 
 ---
 
@@ -290,6 +302,7 @@ Generated `~/.gitconfig` block:
 | Hand-written YAML subset | `profiles.yaml` needs a documented subset, not a full parser |
 | Plain JS + Web Components for the GUI | no bundler, no framework, ~30 KB of source |
 | Generator, not a `git` wrapper | after `gs apply`, plain `git` just works |
+| One message catalogue for both surfaces | the CLI and the GUI cannot drift apart; a missing entry falls back to English |
 
 ---
 
@@ -324,6 +337,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow.
 - [x] M2 — `doctor` diagnostics (keys, ssh config, identity resolution)
 - [x] M3 — `gs gui` (local web UI, zero dependencies)
 - [x] M4 — SSH key management, encrypted snapshots, `export` / `import`
+- [x] M5 — GUI parity with the CLI, bilingual output, self-healing config errors
 
 ---
 

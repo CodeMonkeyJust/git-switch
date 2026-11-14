@@ -1,5 +1,7 @@
 # Contributing to gs
 
+[中文说明](CONTRIBUTING.zh-CN.md)
+
 Thanks for taking the time to contribute.
 
 ## Ground rules

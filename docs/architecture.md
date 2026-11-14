@@ -1,5 +1,7 @@
 # Architecture
 
+[中文说明](architecture.zh-CN.md)
+
 `gs` is a **generator**: it computes the configuration files that `git` and
 `ssh` read, and it diagnoses the resulting environment. It never intercepts or
 wraps `git`.

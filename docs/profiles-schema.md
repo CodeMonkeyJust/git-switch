@@ -1,5 +1,7 @@
 # `profiles.yaml` schema (version 1)
 
+[中文说明](profiles-schema.zh-CN.md)
+
 Located at `~/.config/gs/profiles.yaml`. This file is the single source of truth.
 
 ## Top level
